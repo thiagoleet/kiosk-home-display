@@ -69,7 +69,7 @@ func (a *App) Run(ctx context.Context) error {
 		a.scheduler.Start()
 	}
 
-	log.Println("Kiosk Home Display backend is running")
+	log.Println("Kiosk Home Display application is running")
 
 	<-ctx.Done()
 
@@ -99,7 +99,7 @@ func (a *App) registerHandlers() {
 }
 
 func (a *App) Stop() error {
-	log.Println("Stopping Kiosk Home Display backend...")
+	log.Println("Stopping Kiosk Home Display application...")
 
 	if a.config.Scheduler.Enabled {
 		a.scheduler.Stop()
@@ -109,7 +109,7 @@ func (a *App) Stop() error {
 		a.idle.Stop()
 	}
 
-	log.Println("Kiosk Home Display backend stopped")
+	log.Println("Kiosk Home Display application stopped")
 
 	return nil
 }

@@ -25,7 +25,10 @@ func main() {
 
 	defer stop()
 
-	application := app.New(cfg)
+	application, err := app.New(cfg)
+	if err != nil {
+		log.Fatalf("failed to create application: %v", err)
+	}
 
 	if err := application.Run(ctx); err != nil {
 		log.Fatal(err)

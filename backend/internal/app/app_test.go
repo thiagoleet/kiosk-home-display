@@ -4,10 +4,15 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/thiagoleet/kiosk-home-display/internal/config"
 )
 
 func TestAppStopsWhenContextIsCancelled(t *testing.T) {
-	application := New()
+	application, err := New(config.Default())
+	if err != nil {
+		t.Fatalf("failed to create application: %v", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 

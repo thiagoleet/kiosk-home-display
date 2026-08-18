@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -20,12 +21,15 @@ type App struct {
 	scheduler *scheduler.Scheduler
 }
 
-func New(cfg config.Config) *App {
+func New(cfg config.Config) (*App, error) {
 	bus := events.NewBus()
 
 	controller, err := display.NewController(cfg.Display.Mode)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf(
+			"create display controller: %w",
+			err,
+		)
 	}
 
 	displayManager := display.NewManager(controller)
@@ -35,12 +39,15 @@ func New(cfg config.Config) *App {
 		cfg.Idle.Timeout,
 	)
 
-	location, err := time.LoadLocation("America/Sao_Paulo")
+	location, err := time.LoadLocation(cfg.Scheduler.Timezone)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf(
+			"load scheduler timezone: %w",
+			err,
+		)
 	}
 
-	scheduler := scheduler.New(
+	schedulerManager := scheduler.New(
 		bus,
 		scheduler.Schedule{
 			On:  cfg.Scheduler.On,
@@ -54,8 +61,8 @@ func New(cfg config.Config) *App {
 		bus:       bus,
 		idle:      idleManager,
 		display:   displayManager,
-		scheduler: scheduler,
-	}
+		scheduler: schedulerManager,
+	}, nil
 }
 
 func (a *App) Run(ctx context.Context) error {

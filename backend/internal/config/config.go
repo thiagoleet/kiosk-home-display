@@ -24,9 +24,10 @@ type IdleConfig struct {
 }
 
 type SchedulerConfig struct {
-	Enabled bool
-	On      string
-	Off     string
+	Enabled  bool
+	On       string
+	Off      string
+	Timezone string
 }
 
 func Default() Config {
@@ -40,9 +41,10 @@ func Default() Config {
 			Timeout: 5 * time.Minute,
 		},
 		Scheduler: SchedulerConfig{
-			Enabled: true,
-			On:      "07:00",
-			Off:     "23:00",
+			Enabled:  true,
+			On:       "07:00",
+			Off:      "23:00",
+			Timezone: "America/Sao_Paulo",
 		},
 	}
 }
@@ -77,6 +79,20 @@ func (c Config) Validate() error {
 		if c.Scheduler.Off == "" {
 			return fmt.Errorf(
 				"schedule off time cannot be empty",
+			)
+		}
+
+		if c.Scheduler.Timezone == "" {
+			return fmt.Errorf(
+				"scheduler timezone cannot be empty",
+			)
+		}
+
+		if _, err := time.LoadLocation(c.Scheduler.Timezone); err != nil {
+			return fmt.Errorf(
+				"invalid scheduler timezone %q: %w",
+				c.Scheduler.Timezone,
+				err,
 			)
 		}
 	}
@@ -145,6 +161,10 @@ func Load() (Config, error) {
 
 	if value := os.Getenv("SCHEDULE_OFF"); value != "" {
 		config.Scheduler.Off = value
+	}
+
+	if value := os.Getenv("TIMEZONE"); value != "" {
+		config.Scheduler.Timezone = value
 	}
 
 	if err := config.Validate(); err != nil {

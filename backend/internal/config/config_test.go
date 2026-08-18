@@ -50,6 +50,13 @@ func TestDefaultConfig(t *testing.T) {
 			config.Scheduler.Off,
 		)
 	}
+
+	if config.Scheduler.Timezone != "America/Sao_Paulo" {
+		t.Fatalf(
+			"expected timezone America/Sao_Paulo, got %q",
+			config.Scheduler.Timezone,
+		)
+	}
 }
 
 func TestLoadOverridesDefaults(t *testing.T) {
@@ -62,6 +69,7 @@ func TestLoadOverridesDefaults(t *testing.T) {
 	t.Setenv("SCHEDULE_ENABLED", "false")
 	t.Setenv("SCHEDULE_ON", "08:00")
 	t.Setenv("SCHEDULE_OFF", "22:00")
+	t.Setenv("TIMEZONE", "America/New_York")
 
 	config, err := Load()
 	if err != nil {
@@ -96,6 +104,13 @@ func TestLoadOverridesDefaults(t *testing.T) {
 	if config.Scheduler.Enabled {
 		t.Fatal("expected scheduler to be disabled")
 	}
+
+	if config.Scheduler.Timezone != "America/New_York" {
+		t.Fatalf(
+			"expected timezone America/New_York, got %q",
+			config.Scheduler.Timezone,
+		)
+	}
 }
 
 func TestLoadRejectsInvalidDisplayMode(t *testing.T) {
@@ -119,5 +134,15 @@ func TestLoadRejectsInvalidBrightness(t *testing.T) {
 
 	if config.Display.Brightness != 0 {
 		t.Fatal("expected empty config on error")
+	}
+}
+
+func TestLoadRejectsInvalidTimezone(t *testing.T) {
+	t.Setenv("TIMEZONE", "Invalid/Timezone")
+
+	_, err := Load()
+
+	if err == nil {
+		t.Fatal("expected configuration error")
 	}
 }

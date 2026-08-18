@@ -33,7 +33,15 @@ func (c *VirtualController) Sleep() error {
 func (c *VirtualController) SetBrightness(level int) error {
 	c.brightness = level
 
-	log.Printf("[DISPLAY] set brightness to %d%%", level)
+	log.Printf("[DISPLAY] brightness: %d%%", level)
 
 	return nil
+}
+
+func (c *VirtualController) State() State {
+	return c.state
+}
+
+func (c *VirtualController) Brightness() int {
+	return c.brightness
 }

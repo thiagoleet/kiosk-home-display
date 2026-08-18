@@ -11,7 +11,10 @@ func NewController(mode string) (Controller, error) {
 		return NewLinuxController(), nil
 
 	default:
-		return nil, fmt.Errorf("unknown display mode: %s", mode)
+		return nil, fmt.Errorf(
+			"unknown display mode: %s",
+			mode,
+		)
 
 	}
 }

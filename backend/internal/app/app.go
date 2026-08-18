@@ -34,6 +34,15 @@ func New(cfg config.Config) (*App, error) {
 
 	displayManager := display.NewManager(controller)
 
+	if err := displayManager.SetBrightness(
+		cfg.Display.Brightness,
+	); err != nil {
+		return nil, fmt.Errorf(
+			"set initial display brightness: %w",
+			err,
+		)
+	}
+
 	idleManager := idle.NewManager(
 		bus,
 		cfg.Idle.Timeout,

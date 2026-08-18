@@ -2,25 +2,29 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	nethttp "net/http"
 	"time"
 
 	"github.com/thiagoleet/kiosk-home-display/internal/config"
 	"github.com/thiagoleet/kiosk-home-display/internal/display"
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
+	"github.com/thiagoleet/kiosk-home-display/internal/http"
 	"github.com/thiagoleet/kiosk-home-display/internal/idle"
 	"github.com/thiagoleet/kiosk-home-display/internal/scheduler"
 	"github.com/thiagoleet/kiosk-home-display/internal/websocket"
 )
 
 type App struct {
-	config    config.Config
-	bus       *events.Bus
-	idle      *idle.Manager
-	display   *display.Manager
-	scheduler *scheduler.Scheduler
-	websocket *websocket.Server
+	config     config.Config
+	bus        *events.Bus
+	idle       *idle.Manager
+	display    *display.Manager
+	scheduler  *scheduler.Scheduler
+	websocket  *websocket.Server
+	httpServer *http.Server
 }
 
 func New(cfg config.Config) (*App, error) {
@@ -69,13 +73,20 @@ func New(cfg config.Config) (*App, error) {
 
 	websocketServer := websocket.NewServer(bus)
 
+	httpServer := http.NewServer(
+		cfg.HTTP.Host,
+		cfg.HTTP.Port,
+		websocketServer,
+	)
+
 	return &App{
-		config:    cfg,
-		bus:       bus,
-		idle:      idleManager,
-		display:   displayManager,
-		scheduler: schedulerManager,
-		websocket: websocketServer,
+		config:     cfg,
+		bus:        bus,
+		idle:       idleManager,
+		display:    displayManager,
+		scheduler:  schedulerManager,
+		websocket:  websocketServer,
+		httpServer: httpServer,
 	}, nil
 }
 
@@ -89,6 +100,17 @@ func (a *App) Run(ctx context.Context) error {
 	if a.config.Scheduler.Enabled {
 		a.scheduler.Start()
 	}
+
+	go func() {
+		if err := a.httpServer.Start(); err != nil {
+			if !errors.Is(err, nethttp.ErrServerClosed) {
+				log.Printf(
+					"HTTP server error: %v",
+					err,
+				)
+			}
+		}
+	}()
 
 	log.Println("Kiosk Home Display application is running")
 
@@ -120,7 +142,20 @@ func (a *App) registerHandlers() {
 }
 
 func (a *App) Stop() error {
-	log.Println("Stopping Kiosk Home Display application...")
+	log.Println("Stopping Kiosk Home Display backend...")
+
+	shutdownCtx, cancel := context.WithTimeout(
+		context.Background(),
+		5*time.Second,
+	)
+	defer cancel()
+
+	if err := a.httpServer.Stop(shutdownCtx); err != nil {
+		log.Printf(
+			"failed to stop HTTP server: %v",
+			err,
+		)
+	}
 
 	if a.config.Scheduler.Enabled {
 		a.scheduler.Stop()
@@ -130,7 +165,7 @@ func (a *App) Stop() error {
 		a.idle.Stop()
 	}
 
-	log.Println("Kiosk Home Display application stopped")
+	log.Println("Kiosk Home Display backend stopped")
 
 	return nil
 }

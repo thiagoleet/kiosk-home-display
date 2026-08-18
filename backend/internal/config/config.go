@@ -8,9 +8,15 @@ import (
 )
 
 type Config struct {
+	HTTP      HTTPConfig
 	Display   DisplayConfig
 	Idle      IdleConfig
 	Scheduler SchedulerConfig
+}
+
+type HTTPConfig struct {
+	Host string
+	Port int
 }
 
 type DisplayConfig struct {
@@ -32,6 +38,10 @@ type SchedulerConfig struct {
 
 func Default() Config {
 	return Config{
+		HTTP: HTTPConfig{
+			Host: "0.0.0.0",
+			Port: 8080,
+		},
 		Display: DisplayConfig{
 			Mode:       "virtual",
 			Brightness: 100,
@@ -50,6 +60,16 @@ func Default() Config {
 }
 
 func (c Config) Validate() error {
+	if c.HTTP.Host == "" {
+		return fmt.Errorf("HTTP host cannot be empty")
+	}
+
+	if c.HTTP.Port < 1 || c.HTTP.Port > 65535 {
+		return fmt.Errorf(
+			"HTTP port must be between 1 and 65535",
+		)
+	}
+
 	if c.Display.Mode != "virtual" && c.Display.Mode != "linux" {
 		return fmt.Errorf(
 			"invalid display mode: %q",
@@ -102,6 +122,22 @@ func (c Config) Validate() error {
 
 func Load() (Config, error) {
 	config := Default()
+
+	if value := os.Getenv("HTTP_HOST"); value != "" {
+		config.HTTP.Host = value
+	}
+
+	if value := os.Getenv("HTTP_PORT"); value != "" {
+		port, err := strconv.Atoi(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid HTTP_PORT: %w",
+				err,
+			)
+		}
+
+		config.HTTP.Port = port
+	}
 
 	if value := os.Getenv("DISPLAY_MODE"); value != "" {
 		config.Display.Mode = value

@@ -6,6 +6,7 @@ import (
 	"log"
 	nethttp "net/http"
 
+	"github.com/thiagoleet/kiosk-home-display/internal/display"
 	"github.com/thiagoleet/kiosk-home-display/internal/websocket"
 )
 
@@ -17,8 +18,13 @@ func NewServer(
 	host string,
 	port int,
 	websocketServer *websocket.Server,
+	displayManager *display.Manager,
 ) *Server {
 	mux := nethttp.NewServeMux()
+
+	displayHandler := NewDisplayHandler(
+		displayManager,
+	)
 
 	mux.Handle(
 		"/ws",
@@ -28,6 +34,21 @@ func NewServer(
 	mux.HandleFunc(
 		"/health",
 		healthHandler,
+	)
+
+	mux.HandleFunc(
+		"/api/display/sleep",
+		displayHandler.Sleep,
+	)
+
+	mux.HandleFunc(
+		"/api/display/wake",
+		displayHandler.Wake,
+	)
+
+	mux.HandleFunc(
+		"/api/display/brightness",
+		displayHandler.Brightness,
 	)
 
 	return &Server{

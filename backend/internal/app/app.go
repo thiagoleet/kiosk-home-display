@@ -87,6 +87,7 @@ func New(cfg config.Config) (*App, error) {
 		cfg.HTTP.Host,
 		cfg.HTTP.Port,
 		websocketServer,
+		displayManager,
 	)
 
 	return &App{

@@ -1,41 +1,180 @@
 package app
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"log"
+	nethttp "net/http"
 	"time"
 
+	"github.com/thiagoleet/kiosk-home-display/internal/config"
+	"github.com/thiagoleet/kiosk-home-display/internal/display"
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
+	"github.com/thiagoleet/kiosk-home-display/internal/http"
+	"github.com/thiagoleet/kiosk-home-display/internal/idle"
+	"github.com/thiagoleet/kiosk-home-display/internal/scheduler"
+	"github.com/thiagoleet/kiosk-home-display/internal/state"
+	"github.com/thiagoleet/kiosk-home-display/internal/websocket"
 )
 
 type App struct {
-	bus *events.Bus
+	config     config.Config
+	bus        *events.Bus
+	idle       *idle.Manager
+	display    *display.Manager
+	scheduler  *scheduler.Scheduler
+	websocket  *websocket.Server
+	httpServer *http.Server
 }
 
-func New() *App {
-	return &App{
-		bus: events.NewBus(),
+func New(cfg config.Config) (*App, error) {
+	bus := events.NewBus()
+
+	controller, err := display.NewController(cfg.Display.Mode)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"create display controller: %w",
+			err,
+		)
 	}
+
+	displayManager := display.NewManager(
+		controller,
+		bus,
+	)
+
+	if err := displayManager.SetBrightness(
+		cfg.Display.Brightness,
+	); err != nil {
+		return nil, fmt.Errorf(
+			"set initial display brightness: %w",
+			err,
+		)
+	}
+
+	idleManager := idle.NewManager(
+		bus,
+		cfg.Idle.Timeout,
+	)
+
+	location, err := time.LoadLocation(cfg.Scheduler.Timezone)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"load scheduler timezone: %w",
+			err,
+		)
+	}
+
+	schedulerManager := scheduler.New(
+		bus,
+		scheduler.Schedule{
+			On:  cfg.Scheduler.On,
+			Off: cfg.Scheduler.Off,
+		},
+		location,
+	)
+
+	stateManager := state.NewManager(displayManager)
+
+	websocketServer := websocket.NewServer(
+		bus,
+		stateManager,
+	)
+
+	httpServer := http.NewServer(
+		cfg.HTTP.Host,
+		cfg.HTTP.Port,
+		websocketServer,
+	)
+
+	return &App{
+		config:     cfg,
+		bus:        bus,
+		idle:       idleManager,
+		display:    displayManager,
+		scheduler:  schedulerManager,
+		websocket:  websocketServer,
+		httpServer: httpServer,
+	}, nil
 }
 
-func (a *App) Run() error {
+func (a *App) Run(ctx context.Context) error {
 	a.registerHandlers()
 
-	log.Println("Kiosk Home Display backend is running")
-
-	a.bus.Publish(events.Event{
-		Type: events.EventNotification,
-		Data: "Backend is working!",
-	})
-
-	for {
-		time.Sleep(10 * time.Second)
+	if a.config.Idle.Enabled {
+		a.idle.Start()
 	}
 
-	return nil
+	if a.config.Scheduler.Enabled {
+		a.scheduler.Start()
+	}
+
+	go func() {
+		if err := a.httpServer.Start(); err != nil {
+			if !errors.Is(err, nethttp.ErrServerClosed) {
+				log.Printf(
+					"HTTP server error: %v",
+					err,
+				)
+			}
+		}
+	}()
+
+	log.Println("Kiosk Home Display application is running")
+
+	<-ctx.Done()
+
+	log.Println("Shutdown signal received")
+
+	return a.Stop()
 }
 
 func (a *App) registerHandlers() {
-	a.bus.Subscribe(events.EventNotification, func(event events.Event) {
-		log.Printf("Notification received: %v", event.Data)
+	a.bus.Subscribe(events.EventIdleTimeout, func(event events.Event) {
+		if err := a.display.Sleep(); err != nil {
+			log.Printf("failed to put display to sleep: %v", err)
+		}
 	})
+
+	a.bus.Subscribe(events.EventScheduleOn, func(event events.Event) {
+		if err := a.display.Wake(); err != nil {
+			log.Printf("failed to wake display: %v", err)
+		}
+	})
+
+	a.bus.Subscribe(events.EventScheduleOff, func(event events.Event) {
+		if err := a.display.Sleep(); err != nil {
+			log.Printf("failed to put display to sleep: %v", err)
+		}
+	})
+}
+
+func (a *App) Stop() error {
+	log.Println("Stopping Kiosk Home Display backend...")
+
+	shutdownCtx, cancel := context.WithTimeout(
+		context.Background(),
+		5*time.Second,
+	)
+	defer cancel()
+
+	if err := a.httpServer.Stop(shutdownCtx); err != nil {
+		log.Printf(
+			"failed to stop HTTP server: %v",
+			err,
+		)
+	}
+
+	if a.config.Scheduler.Enabled {
+		a.scheduler.Stop()
+	}
+
+	if a.config.Idle.Enabled {
+		a.idle.Stop()
+	}
+
+	log.Println("Kiosk Home Display backend stopped")
+
+	return nil
 }

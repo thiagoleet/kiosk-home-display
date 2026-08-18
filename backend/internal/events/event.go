@@ -5,6 +5,9 @@ type Type string
 const (
 	EventIdleTimeout Type = "idle.timeout"
 
+	EventScheduleOn  Type = "schedule.on"
+	EventScheduleOff Type = "schedule.off"
+
 	EventPrinterStarted   Type = "printer.started"
 	EventPrinterCompleted Type = "printer.completed"
 

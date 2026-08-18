@@ -1,4 +1,4 @@
-package iddle
+package idle
 
 import (
 	"sync"

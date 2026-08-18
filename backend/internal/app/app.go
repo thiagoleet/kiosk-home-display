@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/thiagoleet/kiosk-home-display/internal/config"
 	"github.com/thiagoleet/kiosk-home-display/internal/display"
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
 	"github.com/thiagoleet/kiosk-home-display/internal/idle"
@@ -12,16 +13,17 @@ import (
 )
 
 type App struct {
+	config    config.Config
 	bus       *events.Bus
 	idle      *idle.Manager
 	display   *display.Manager
 	scheduler *scheduler.Scheduler
 }
 
-func New() *App {
+func New(cfg config.Config) *App {
 	bus := events.NewBus()
 
-	controller, err := display.NewController("virtual")
+	controller, err := display.NewController(cfg.Display.Mode)
 	if err != nil {
 		panic(err)
 	}
@@ -30,7 +32,7 @@ func New() *App {
 
 	idleManager := idle.NewManager(
 		bus,
-		5*time.Minute,
+		cfg.Idle.Timeout,
 	)
 
 	location, err := time.LoadLocation("America/Sao_Paulo")
@@ -41,13 +43,14 @@ func New() *App {
 	scheduler := scheduler.New(
 		bus,
 		scheduler.Schedule{
-			On:  "07:00",
-			Off: "23:00",
+			On:  cfg.Scheduler.On,
+			Off: cfg.Scheduler.Off,
 		},
 		location,
 	)
 
 	return &App{
+		config:    cfg,
 		bus:       bus,
 		idle:      idleManager,
 		display:   displayManager,
@@ -58,8 +61,13 @@ func New() *App {
 func (a *App) Run(ctx context.Context) error {
 	a.registerHandlers()
 
-	a.idle.Start()
-	a.scheduler.Start()
+	if a.config.Idle.Enabled {
+		a.idle.Start()
+	}
+
+	if a.config.Scheduler.Enabled {
+		a.scheduler.Start()
+	}
 
 	log.Println("Kiosk Home Display backend is running")
 
@@ -93,10 +101,15 @@ func (a *App) registerHandlers() {
 func (a *App) Stop() error {
 	log.Println("Stopping Kiosk Home Display backend...")
 
-	a.scheduler.Stop()
-	a.idle.Stop()
+	if a.config.Scheduler.Enabled {
+		a.scheduler.Stop()
+	}
 
-	log.Println("Kiosk Home Display stopped")
+	if a.config.Idle.Enabled {
+		a.idle.Stop()
+	}
+
+	log.Println("Kiosk Home Display backend stopped")
+
 	return nil
-
 }

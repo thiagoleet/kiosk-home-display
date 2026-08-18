@@ -11,6 +11,7 @@ import (
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
 	"github.com/thiagoleet/kiosk-home-display/internal/idle"
 	"github.com/thiagoleet/kiosk-home-display/internal/scheduler"
+	"github.com/thiagoleet/kiosk-home-display/internal/websocket"
 )
 
 type App struct {
@@ -19,6 +20,7 @@ type App struct {
 	idle      *idle.Manager
 	display   *display.Manager
 	scheduler *scheduler.Scheduler
+	websocket *websocket.Server
 }
 
 func New(cfg config.Config) (*App, error) {
@@ -65,12 +67,15 @@ func New(cfg config.Config) (*App, error) {
 		location,
 	)
 
+	websocketServer := websocket.NewServer(bus)
+
 	return &App{
 		config:    cfg,
 		bus:       bus,
 		idle:      idleManager,
 		display:   displayManager,
 		scheduler: schedulerManager,
+		websocket: websocketServer,
 	}, nil
 }
 

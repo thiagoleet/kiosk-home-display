@@ -36,8 +36,13 @@ export class WebSocketService {
 
     this.clearReconnectTimer();
 
-    this.socket?.close();
+    const socket = this.socket;
+
     this.socket = null;
+
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+      socket.close();
+    }
   }
 
   private createConnection(
@@ -46,20 +51,28 @@ export class WebSocketService {
     onOpen?: WebSocketConnectionHandler,
     onClose?: WebSocketConnectionHandler,
   ) {
-    this.socket = new WebSocket(url);
+    if (this.manuallyDisconnected) {
+      return;
+    }
 
-    this.socket.onopen = () => {
+    const socket = new WebSocket(url);
+
+    this.socket = socket;
+
+    socket.onopen = () => {
       onOpen?.();
     };
 
-    this.socket.onmessage = (event) => {
+    socket.onmessage = (event) => {
       const message = JSON.parse(event.data) as WebSocketMessage;
 
       onMessage(message);
     };
 
-    this.socket.onclose = () => {
-      this.socket = null;
+    socket.onclose = () => {
+      if (this.socket === socket) {
+        this.socket = null;
+      }
 
       onClose?.();
 

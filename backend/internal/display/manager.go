@@ -17,8 +17,8 @@ type Manager struct {
 }
 
 type Snapshot struct {
-	Power      State
-	Brightness int
+	Power      State `json:"power"`
+	Brightness int   `json:"brightness"`
 }
 
 func NewManager(

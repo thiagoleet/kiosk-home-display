@@ -40,7 +40,7 @@ func (c *Client) writeLoop() {
 			message,
 		); err != nil {
 			log.Printf(
-				"failed to send WebSocket message: %v",
+				"WebSocket write failed: %v",
 				err,
 			)
 
@@ -65,5 +65,12 @@ func (c *Client) Close() {
 
 	<-c.done
 
-	_ = c.conn.Close(websocket.StatusNormalClosure, "")
+	_ = c.conn.Close(
+		websocket.StatusNormalClosure,
+		"",
+	)
+}
+
+func (c *Client) Done() <-chan struct{} {
+	return c.done
 }

@@ -1,13 +1,29 @@
-import { useState } from "react";
-import "./app.css";
+import { ConnectionStatus } from "./components/connection-status";
+import { DisplayStatus } from "./components/display-status";
+import { useKioskState } from "./hooks/use-kiosk-state";
+import { useWebSocket } from "./hooks/use-websocket";
 
-export function App() {
-  const [count, setCount] = useState(0);
+const websocketUrl = "ws://localhost:8080/ws";
+
+function App() {
+  console.log("App render");
+
+  const { state, handleMessage } = useKioskState();
+
+  const { status } = useWebSocket({
+    url: websocketUrl,
+    onMessage: handleMessage,
+  });
 
   return (
-    <>
-      <h1>Count: {count}</h1>
-      <button onClick={() => setCount(count + 1)}>Increment</button>
-    </>
+    <main>
+      <h1>Kiosk Home Display</h1>
+
+      <ConnectionStatus status={status} />
+
+      <DisplayStatus display={state.display} />
+    </main>
   );
 }
+
+export default App;

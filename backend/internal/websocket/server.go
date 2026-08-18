@@ -16,8 +16,9 @@ type Message struct {
 }
 
 type Server struct {
-	bus          *events.Bus
-	stateManager *state.Manager
+	bus            *events.Bus
+	stateManager   *state.Manager
+	allowedOrigins []string
 
 	mu      sync.RWMutex
 	clients map[*Client]struct{}
@@ -26,11 +27,13 @@ type Server struct {
 func NewServer(
 	bus *events.Bus,
 	stateManager *state.Manager,
+	allowedOrigins []string,
 ) *Server {
 	return &Server{
-		bus:          bus,
-		stateManager: stateManager,
-		clients:      make(map[*Client]struct{}),
+		bus:            bus,
+		stateManager:   stateManager,
+		clients:        make(map[*Client]struct{}),
+		allowedOrigins: allowedOrigins,
 	}
 }
 
@@ -42,9 +45,16 @@ func (s *Server) handleConnection(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	conn, err := websocket.Accept(w, r, nil)
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		OriginPatterns: s.allowedOrigins,
+	})
+
 	if err != nil {
-		log.Printf("websocket connection failed: %v", err)
+		log.Printf(
+			"websocket connection failed: %v",
+			err,
+		)
+
 		return
 	}
 
@@ -52,6 +62,12 @@ func (s *Server) handleConnection(
 
 	s.addClient(client)
 	client.Start()
+
+	go func() {
+		<-client.Done()
+
+		s.removeClient(client)
+	}()
 
 	client.Send(Message{
 		Type: "state.snapshot",
@@ -103,6 +119,12 @@ func (s *Server) Start() {
 }
 
 func (s *Server) handleEvent(event events.Event) {
+	log.Printf(
+		"[WEBSOCKET] event received: type=%s data=%#v",
+		event.Type,
+		event.Data,
+	)
+
 	message := Message{
 		Type: string(event.Type),
 		Data: event.Data,

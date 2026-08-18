@@ -17,8 +17,8 @@ type Manager struct {
 }
 
 type Snapshot struct {
-	Power      State
-	Brightness int
+	Power      State `json:"power"`
+	Brightness int   `json:"brightness"`
 }
 
 func NewManager(
@@ -93,6 +93,8 @@ func (m *Manager) SetBrightness(level int) error {
 	}
 
 	m.brightness = level
+
+	m.publishStateChanged()
 
 	return nil
 }

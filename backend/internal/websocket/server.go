@@ -48,8 +48,13 @@ func (s *Server) handleConnection(
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		OriginPatterns: s.allowedOrigins,
 	})
+
 	if err != nil {
-		log.Printf("websocket connection failed: %v", err)
+		log.Printf(
+			"websocket connection failed: %v",
+			err,
+		)
+
 		return
 	}
 

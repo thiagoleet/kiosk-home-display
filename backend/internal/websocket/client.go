@@ -65,7 +65,10 @@ func (c *Client) Close() {
 
 	<-c.done
 
-	_ = c.conn.Close(websocket.StatusNormalClosure, "")
+	_ = c.conn.Close(
+		websocket.StatusNormalClosure,
+		"",
+	)
 }
 
 func (c *Client) Done() <-chan struct{} {

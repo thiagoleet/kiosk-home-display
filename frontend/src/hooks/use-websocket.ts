@@ -18,10 +18,14 @@ export function useWebSocket({ url, onMessage }: UseWebSocketOptions) {
   const [status, setStatus] = useState<WebSocketStatus>("connecting");
 
   useEffect(() => {
-    console.log("WebSocket effect: connect");
+    const service = new WebSocketService({
+      reconnectDelay: 2000,
+    });
 
-    const service = new WebSocketService();
     serviceRef.current = service;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStatus("connecting");
 
     service.connect(
       url,
@@ -35,8 +39,6 @@ export function useWebSocket({ url, onMessage }: UseWebSocketOptions) {
     );
 
     return () => {
-      console.log("WebSocket effect: disconnect");
-
       service.disconnect();
       serviceRef.current = null;
     };

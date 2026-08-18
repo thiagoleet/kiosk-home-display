@@ -104,6 +104,8 @@ func New(cfg config.Config) (*App, error) {
 func (a *App) Run(ctx context.Context) error {
 	a.registerHandlers()
 
+	a.websocket.Start()
+
 	if a.config.Idle.Enabled {
 		a.idle.Start()
 	}

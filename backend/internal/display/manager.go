@@ -94,6 +94,8 @@ func (m *Manager) SetBrightness(level int) error {
 
 	m.brightness = level
 
+	m.publishStateChanged()
+
 	return nil
 }
 

@@ -119,6 +119,12 @@ func (s *Server) Start() {
 }
 
 func (s *Server) handleEvent(event events.Event) {
+	log.Printf(
+		"[WEBSOCKET] event received: type=%s data=%#v",
+		event.Type,
+		event.Data,
+	)
+
 	message := Message{
 		Type: string(event.Type),
 		Data: event.Data,

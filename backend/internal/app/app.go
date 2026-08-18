@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -51,7 +52,7 @@ func New() *App {
 	}
 }
 
-func (a *App) Run() error {
+func (a *App) Run(ctx context.Context) error {
 	a.registerHandlers()
 
 	a.idle.Start()
@@ -59,9 +60,11 @@ func (a *App) Run() error {
 
 	log.Println("Kiosk Home Display backend is running")
 
-	select {}
+	<-ctx.Done()
 
-	return nil
+	log.Println("Shutdown signal received")
+
+	return a.Stop()
 }
 
 func (a *App) registerHandlers() {
@@ -82,4 +85,15 @@ func (a *App) registerHandlers() {
 			log.Printf("failed to put display to sleep: %v", err)
 		}
 	})
+}
+
+func (a *App) Stop() error {
+	log.Println("Stopping Kiosk Home Display backend...")
+
+	a.scheduler.Stop()
+	a.idle.Stop()
+
+	log.Println("Kiosk Home Display stopped")
+	return nil
+
 }

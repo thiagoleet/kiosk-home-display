@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"sync"
 	"time"
 
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
@@ -23,6 +24,8 @@ type Scheduler struct {
 
 	stop chan struct{}
 	done chan struct{}
+
+	stopOnce sync.Once
 }
 
 func New(
@@ -45,7 +48,10 @@ func (s *Scheduler) Start() {
 }
 
 func (s *Scheduler) Stop() {
-	close(s.stop)
+	s.stopOnce.Do(func() {
+		close(s.stop)
+	})
+
 	<-s.done
 }
 

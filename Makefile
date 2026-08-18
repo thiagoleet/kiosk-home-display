@@ -1,4 +1,4 @@
-.PHONY: test test-verbose coverage build run
+.PHONY: test test-verbose coverage race build run
 
 test:
 	cd backend && gotestsum ./...
@@ -9,6 +9,9 @@ test-verbose:
 coverage:
 	cd backend && go test ./... -coverprofile=coverage.out
 	cd backend && go tool cover -html=coverage.out
+
+race:
+	cd backend && go test -race ./...
 
 build:
 	cd backend && go build -o kiosk ./cmd/kiosk

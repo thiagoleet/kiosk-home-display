@@ -24,7 +24,9 @@ vendor/
 
 # Local env/config overrides
 .env
+.env.local
 .env.*
+!.env.example
 config.local.json
 
 # Logs

@@ -31,3 +31,7 @@ config.local.json
 
 # Logs
 *.log
+
+
+# Coverage files
+coverage.out

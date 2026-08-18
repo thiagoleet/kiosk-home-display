@@ -2,7 +2,6 @@ package app
 
 import (
 	"log"
-	"time"
 
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
 )
@@ -26,10 +25,6 @@ func (a *App) Run() error {
 		Type: events.EventNotification,
 		Data: "Backend is working!",
 	})
-
-	for {
-		time.Sleep(10 * time.Second)
-	}
 
 	return nil
 }

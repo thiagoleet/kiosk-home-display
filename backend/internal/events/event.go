@@ -3,6 +3,8 @@ package events
 type Type string
 
 const (
+	EventIdleTimeout Type = "idle.timeout"
+
 	EventPrinterStarted   Type = "printer.started"
 	EventPrinterCompleted Type = "printer.completed"
 

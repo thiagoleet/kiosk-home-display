@@ -53,7 +53,7 @@ func (m *Manager) resetTimer() {
 
 	m.timer = time.AfterFunc(m.timeout, func() {
 		m.bus.Publish(events.Event{
-			Type: events.EventDisplaySleep,
+			Type: events.EventIdleTimeout,
 		})
 	})
 }

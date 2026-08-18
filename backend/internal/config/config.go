@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -15,8 +16,9 @@ type Config struct {
 }
 
 type HTTPConfig struct {
-	Host string
-	Port int
+	Host           string
+	Port           int
+	AllowedOrigins []string
 }
 
 type DisplayConfig struct {
@@ -41,6 +43,9 @@ func Default() Config {
 		HTTP: HTTPConfig{
 			Host: "0.0.0.0",
 			Port: 8080,
+			AllowedOrigins: []string{
+				"localhost:5173",
+			},
 		},
 		Display: DisplayConfig{
 			Mode:       "virtual",
@@ -137,6 +142,13 @@ func Load() (Config, error) {
 		}
 
 		config.HTTP.Port = port
+	}
+
+	if value := os.Getenv("HTTP_ALLOWED_ORIGINS"); value != "" {
+		config.HTTP.AllowedOrigins = strings.Split(
+			value,
+			",",
+		)
 	}
 
 	if value := os.Getenv("DISPLAY_MODE"); value != "" {

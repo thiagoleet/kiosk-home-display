@@ -80,6 +80,7 @@ func New(cfg config.Config) (*App, error) {
 	websocketServer := websocket.NewServer(
 		bus,
 		stateManager,
+		cfg.HTTP.AllowedOrigins,
 	)
 
 	httpServer := http.NewServer(

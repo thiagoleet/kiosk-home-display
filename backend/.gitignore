@@ -1,0 +1,31 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go build output
+/bin/
+/build/
+/out/
+
+# Go test cache
+*.test
+
+# Dependency directories
+vendor/
+
+# Editor / OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local env/config overrides
+.env
+.env.*
+config.local.json
+
+# Logs
+*.log

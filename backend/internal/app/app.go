@@ -22,6 +22,11 @@ func (a *App) Run() error {
 
 	log.Println("Kiosk Home Display backend is running")
 
+	a.bus.Publish(events.Event{
+		Type: events.EventNotification,
+		Data: "Backend is working!",
+	})
+
 	for {
 		time.Sleep(10 * time.Second)
 	}

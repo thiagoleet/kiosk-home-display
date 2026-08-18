@@ -38,15 +38,23 @@ func (m *Manager) Sleep() error {
 	return nil
 }
 
-func (m *Manager) Dim() error {
-	if m.state == StateDimmed {
-		return nil
-	}
+// func (m *Manager) Dim() error {
+// 	if m.state == StateDimmed {
+// 		return nil
+// 	}
 
-	if err := m.controller.Dim(); err != nil {
+// 	if err := m.controller.Dim(); err != nil {
+// 		return err
+// 	}
+
+// 	m.state = StateDimmed
+// 	return nil
+// }
+
+func (m *Manager) SetBrightness(level int) error {
+	if err := m.controller.SetBrightness(level); err != nil {
 		return err
 	}
 
-	m.state = StateDimmed
 	return nil
 }

@@ -14,7 +14,12 @@ func (c *MockController) Sleep() error {
 	return nil
 }
 
-func (c *MockController) Dim() error {
-	log.Println("Display: Dim called")
+// func (c *MockController) Dim() error {
+// 	log.Println("Display: Dim called")
+// 	return nil
+// }
+
+func (c *MockController) SetBrightness(level int) error {
+	log.Printf("Display: SetBrightness called with level %d", level)
 	return nil
 }

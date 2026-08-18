@@ -21,7 +21,10 @@ type App struct {
 func New() *App {
 	bus := events.NewBus()
 
-	controller := &display.MockController{}
+	controller, err := display.NewController("virtual")
+	if err != nil {
+		panic(err)
+	}
 
 	displayManager := display.NewManager(controller)
 

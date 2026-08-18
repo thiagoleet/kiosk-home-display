@@ -2,15 +2,14 @@ package main
 
 import (
 	"log"
-	"time"
+
+	"github.com/thiagoleet/kiosk-home-display/internal/app"
 )
 
 func main() {
-	log.Println("Kiosk Home Display backend starting…")
+	application := app.New()
 
-	for {
-		log.Println("Backend is running")
-
-		time.Sleep(10 * time.Second)
+	if err := application.Run(); err != nil {
+		log.Fatal(err)
 	}
 }

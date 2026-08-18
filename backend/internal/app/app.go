@@ -14,6 +14,7 @@ import (
 	"github.com/thiagoleet/kiosk-home-display/internal/http"
 	"github.com/thiagoleet/kiosk-home-display/internal/idle"
 	"github.com/thiagoleet/kiosk-home-display/internal/scheduler"
+	"github.com/thiagoleet/kiosk-home-display/internal/state"
 	"github.com/thiagoleet/kiosk-home-display/internal/websocket"
 )
 
@@ -38,7 +39,10 @@ func New(cfg config.Config) (*App, error) {
 		)
 	}
 
-	displayManager := display.NewManager(controller)
+	displayManager := display.NewManager(
+		controller,
+		bus,
+	)
 
 	if err := displayManager.SetBrightness(
 		cfg.Display.Brightness,
@@ -71,7 +75,12 @@ func New(cfg config.Config) (*App, error) {
 		location,
 	)
 
-	websocketServer := websocket.NewServer(bus)
+	stateManager := state.NewManager(displayManager)
+
+	websocketServer := websocket.NewServer(
+		bus,
+		stateManager,
+	)
 
 	httpServer := http.NewServer(
 		cfg.HTTP.Host,

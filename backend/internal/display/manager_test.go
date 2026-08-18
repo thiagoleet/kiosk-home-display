@@ -1,10 +1,15 @@
 package display
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/thiagoleet/kiosk-home-display/internal/events"
+)
 
 func TestManagerStartsWithDisplayOn(t *testing.T) {
+	bus := events.NewBus()
 	controller := NewVirtualController()
-	manager := NewManager(controller)
+	manager := NewManager(controller, bus)
 
 	if manager.State() != StateOn {
 		t.Fatalf(
@@ -24,8 +29,9 @@ func TestManagerStartsWithDisplayOn(t *testing.T) {
 }
 
 func TestManagerSleepsDisplay(t *testing.T) {
+	bus := events.NewBus()
 	controller := NewVirtualController()
-	manager := NewManager(controller)
+	manager := NewManager(controller, bus)
 
 	err := manager.Sleep()
 	if err != nil {
@@ -51,7 +57,8 @@ func TestManagerSleepsDisplay(t *testing.T) {
 
 func TestManagerWakesDisplay(t *testing.T) {
 	controller := NewVirtualController()
-	manager := NewManager(controller)
+	bus := events.NewBus()
+	manager := NewManager(controller, bus)
 
 	if err := manager.Sleep(); err != nil {
 		t.Fatalf("failed to sleep display: %v", err)
@@ -80,7 +87,8 @@ func TestManagerWakesDisplay(t *testing.T) {
 
 func TestManagerDoesNotWakeAlreadyAwakeDisplay(t *testing.T) {
 	controller := NewVirtualController()
-	manager := NewManager(controller)
+	bus := events.NewBus()
+	manager := NewManager(controller, bus)
 
 	if err := manager.Wake(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -93,7 +101,8 @@ func TestManagerDoesNotWakeAlreadyAwakeDisplay(t *testing.T) {
 
 func TestManagerSetsBrightness(t *testing.T) {
 	controller := NewVirtualController()
-	manager := NewManager(controller)
+	bus := events.NewBus()
+	manager := NewManager(controller, bus)
 
 	err := manager.SetBrightness(75)
 	if err != nil {
@@ -109,8 +118,9 @@ func TestManagerSetsBrightness(t *testing.T) {
 }
 
 func TestManagerRejectsInvalidBrightness(t *testing.T) {
+	bus := events.NewBus()
 	controller := NewVirtualController()
-	manager := NewManager(controller)
+	manager := NewManager(controller, bus)
 
 	tests := []int{
 		-1,

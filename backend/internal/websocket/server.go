@@ -7,6 +7,7 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
+	"github.com/thiagoleet/kiosk-home-display/internal/state"
 )
 
 type Message struct {
@@ -15,16 +16,21 @@ type Message struct {
 }
 
 type Server struct {
-	bus *events.Bus
+	bus          *events.Bus
+	stateManager *state.Manager
 
 	mu      sync.RWMutex
 	clients map[*Client]struct{}
 }
 
-func NewServer(bus *events.Bus) *Server {
+func NewServer(
+	bus *events.Bus,
+	stateManager *state.Manager,
+) *Server {
 	return &Server{
-		bus:     bus,
-		clients: make(map[*Client]struct{}),
+		bus:          bus,
+		stateManager: stateManager,
+		clients:      make(map[*Client]struct{}),
 	}
 }
 
@@ -46,6 +52,11 @@ func (s *Server) handleConnection(
 
 	s.addClient(client)
 	client.Start()
+
+	client.Send(Message{
+		Type: "state.snapshot",
+		Data: s.stateManager.Snapshot(),
+	})
 
 	defer func() {
 		s.removeClient(client)
@@ -80,6 +91,10 @@ func (s *Server) Start() {
 
 	s.bus.Subscribe(events.EventDisplayWake, s.handleEvent)
 	s.bus.Subscribe(events.EventDisplaySleep, s.handleEvent)
+	s.bus.Subscribe(
+		events.EventDisplayStateChanged,
+		s.handleEvent,
+	)
 
 	s.bus.Subscribe(events.EventPrinterStarted, s.handleEvent)
 	s.bus.Subscribe(events.EventPrinterCompleted, s.handleEvent)

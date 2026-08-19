@@ -1,4 +1,4 @@
-// import { NotificationIcon } from "./notification-icon";
+import { NotificationIcon } from "./notification-icon";
 
 import type { Notification } from "../../types/notification";
 
@@ -14,7 +14,7 @@ export function NotificationList({ notifications }: NotificationListProps) {
           key={notification.id}
           data-level={notification.level}
         >
-          {/* <NotificationIcon context={notification.context} /> */}
+          <NotificationIcon context={notification.context} />
 
           <div>
             <strong>{notification.title}</strong>

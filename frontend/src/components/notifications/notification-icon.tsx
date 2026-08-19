@@ -1,9 +1,4 @@
-import {
-  BellOutlined,
-  PrinterOutlined,
-  SettingOutlined,
-  WifiOutlined,
-} from "@ant-design/icons";
+import { Bell, Network, Printer, Settings } from "lucide-react";
 
 import type { NotificationContext } from "../../types/notification";
 
@@ -14,15 +9,15 @@ type NotificationIconProps = {
 export function NotificationIcon({ context }: NotificationIconProps) {
   switch (context) {
     case "printer":
-      return <PrinterOutlined />;
+      return <Printer />;
 
     case "network":
-      return <WifiOutlined />;
+      return <Network />;
 
     case "system":
-      return <SettingOutlined />;
+      return <Settings />;
 
     default:
-      return <BellOutlined />;
+      return <Bell />;
   }
 }

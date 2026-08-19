@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-
-import type { ScreenMode } from "../types/screen";
+import type { ScreenMode } from "../../types/screen";
 
 type KioskScreenProps = {
   mode: ScreenMode;
@@ -8,5 +7,12 @@ type KioskScreenProps = {
 };
 
 export function KioskScreen({ mode, children }: KioskScreenProps) {
-  return <main data-screen-mode={mode}>{children}</main>;
+  return (
+    <main
+      className="kiosk-screen"
+      data-screen-mode={mode}
+    >
+      {children}
+    </main>
+  );
 }

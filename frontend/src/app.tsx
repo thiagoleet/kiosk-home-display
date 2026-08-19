@@ -1,10 +1,6 @@
 // Components
-import { ConnectionStatus } from "./components/connection-status";
-import { DisplayStatus } from "./components/display-status";
-import { NotificationList } from "./components/notifications/notification-list";
-import { PrinterStatus } from "./components/printer-status";
-import { KioskLayout } from "./components/kiosk-layout";
-import { KioskScreen } from "./components/kiosk-screen";
+import { KioskLayout } from "./components/kiosk/kiosk-layout";
+import { KioskScreen } from "./components/kiosk/kiosk-screen";
 
 // Hooks
 import { useKioskState } from "./hooks/use-kiosk-state";
@@ -16,26 +12,24 @@ import { useScreenMode } from "./hooks/use-screen-mode";
 function App() {
   const { state } = useKioskState();
   const { notifications } = useNotifications();
-  const { status } = useWebSocketContext();
   const { state: printerState, currentJob } = usePrinter();
+  const { status } = useWebSocketContext();
+
   const { mode } = useScreenMode({
     notifications,
   });
 
   return (
     <KioskScreen mode={mode}>
-      <KioskLayout mode={mode}>
-        <ConnectionStatus status={status} />
-
-        <DisplayStatus display={state.display} />
-
-        <PrinterStatus
-          state={printerState}
-          job={currentJob}
-        />
-
-        <NotificationList notifications={notifications} />
-      </KioskLayout>
+      <KioskLayout
+        mode={mode}
+        kioskName="KIOSK Name"
+        connectionStatus={status}
+        printerState={printerState}
+        currentJob={currentJob}
+        notifications={notifications}
+        activities={[]}
+      />
     </KioskScreen>
   );
 }

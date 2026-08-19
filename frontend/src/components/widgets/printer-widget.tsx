@@ -12,7 +12,10 @@ export function PrinterWidget({ state, job }: PrinterWidgetProps) {
   const isPrinting = state === "printing";
 
   return (
-    <section className="widget printer-widget">
+    <section
+      className="widget printer-widget"
+      data-state={state}
+    >
       <div className="widget-title">
         <Printer size={18} />
         <span>Printer</span>

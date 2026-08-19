@@ -1,0 +1,31 @@
+.printer-widget__state {
+  display: flex;
+  align-items: center;
+
+  gap: var(--spacing-sm);
+
+  margin-top: var(--spacing-lg);
+
+  font-size: 1.25rem;
+  font-weight: var(--font-heading-weight);
+
+  color: var(--color-success);
+}
+
+.printer-widget[data-state="printing"]
+  .printer-widget__state {
+  color: var(--color-primary);
+}
+
+.printer-widget__job {
+  margin:
+    var(--spacing-sm)
+    0
+    0;
+
+  color: var(--color-secondary);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

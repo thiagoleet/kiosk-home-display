@@ -1,0 +1,30 @@
+:root {
+  --color-background: transparent;
+  --color-surface: transparent;
+  --color-surface-elevated: transparent;
+
+  --color-foreground: currentColor;
+  --color-secondary: currentColor;
+  --color-muted: currentColor;
+
+  --color-primary: currentColor;
+  --color-border: currentColor;
+
+  --color-success: currentColor;
+  --color-warning: currentColor;
+  --color-error: currentColor;
+
+  --font-family: sans-serif;
+
+  --font-heading-weight: 600;
+  --font-body-weight: 400;
+
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+
+  --border-width: 1px;
+  --border-radius: 0;
+}

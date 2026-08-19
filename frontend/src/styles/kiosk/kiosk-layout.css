@@ -1,0 +1,19 @@
+.kiosk-layout {
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  height: 100%;
+}
+
+.kiosk-layout__content {
+  flex: 1;
+
+  min-width: 0;
+  min-height: 0;
+
+  width: 100%;
+  height: 100%;
+
+  overflow: hidden;
+}

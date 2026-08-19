@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+
 import type { ScreenMode } from "../../types/screen";
 
 type KioskScreenProps = {

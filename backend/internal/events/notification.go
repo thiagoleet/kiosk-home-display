@@ -2,6 +2,14 @@ package events
 
 import "github.com/google/uuid"
 
+type NotificationContext string
+
+const (
+	NotificationContextPrinter NotificationContext = "printer"
+	NotificationContextSystem  NotificationContext = "system"
+	NotificationContextNetwork NotificationContext = "network"
+)
+
 type NotificationLevel string
 
 const (
@@ -12,11 +20,29 @@ const (
 )
 
 type Notification struct {
-	ID       string            `json:"id"`
-	Title    string            `json:"title"`
-	Message  string            `json:"message"`
-	Level    NotificationLevel `json:"level"`
-	Duration int               `json:"duration"`
+	ID       string              `json:"id"`
+	Context  NotificationContext `json:"context"`
+	Title    string              `json:"title"`
+	Message  string              `json:"message"`
+	Level    NotificationLevel   `json:"level"`
+	Duration int                 `json:"duration"`
+}
+
+func NewNotification(
+	context NotificationContext,
+	title string,
+	message string,
+	level NotificationLevel,
+	duration int,
+) Notification {
+	return Notification{
+		ID:       uuid.NewString(),
+		Context:  context,
+		Title:    title,
+		Message:  message,
+		Level:    level,
+		Duration: duration,
+	}
 }
 
 func PublishNotification(
@@ -27,19 +53,4 @@ func PublishNotification(
 		Type: EventNotification,
 		Data: notification,
 	})
-}
-
-func NewNotification(
-	title string,
-	message string,
-	level NotificationLevel,
-	duration int,
-) Notification {
-	return Notification{
-		ID:       uuid.NewString(),
-		Title:    title,
-		Message:  message,
-		Level:    level,
-		Duration: duration,
-	}
 }

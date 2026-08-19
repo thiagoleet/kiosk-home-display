@@ -1,12 +1,13 @@
-import type { Notification } from "../../types/notification";
-import type { ScreenMode } from "../../types/screen";
-
-import type { WebSocketStatus } from "../../hooks/use-websocket";
-import type { PrinterState } from "../../hooks/use-printer";
-import type { PrintJob } from "../../types/printer";
+import { KioskHeader } from "./kiosk-header";
 
 import { HomeLayout } from "../layouts/home-layout";
 import { NotificationLayout } from "../layouts/notification-layout";
+
+import type { Notification } from "../../types/notification";
+import type { ScreenMode } from "../../types/screen";
+import type { WebSocketStatus } from "../../hooks/use-websocket";
+import type { PrinterState } from "../../hooks/use-printer";
+import type { PrintJob } from "../../types/printer";
 import type { Activity } from "../widgets/activity-widget";
 
 type KioskLayoutProps = {
@@ -27,26 +28,26 @@ export function KioskLayout({
   activities,
 }: KioskLayoutProps) {
   return (
-    <div className="kiosk-layout">
+    <section className="kiosk-layout">
+      <KioskHeader
+        status={connectionStatus}
+        hasNotification={notification !== null}
+      />
+
       <div
-        key={mode}
         className="kiosk-layout__content"
         data-mode={mode}
       >
         {mode === "notification" && notification ? (
-          <NotificationLayout
-            connectionStatus={connectionStatus}
-            notification={notification}
-          />
+          <NotificationLayout notification={notification} />
         ) : (
           <HomeLayout
-            connectionStatus={connectionStatus}
             printerState={printerState}
             currentJob={currentJob}
             activities={activities}
           />
         )}
       </div>
-    </div>
+    </section>
   );
 }

@@ -1,23 +1,15 @@
 import type { Notification } from "../../types/notification";
-import type { WebSocketStatus } from "../../types/websocket";
 import { KioskClock } from "../kiosk/kiosk-clock";
 import { KioskGreeting } from "../kiosk/kiosk-greeting";
-import { KioskHeader } from "../kiosk/kiosk-header";
 import { NotificationList } from "../notifications/notification-list";
 
 type NotificationLayoutProps = {
-  connectionStatus: WebSocketStatus;
   notification: Notification | null;
 };
 
-export function NotificationLayout({
-  connectionStatus,
-  notification,
-}: NotificationLayoutProps) {
+export function NotificationLayout({ notification }: NotificationLayoutProps) {
   return (
     <section className="notification-layout">
-      <KioskHeader status={connectionStatus} />
-
       <div className="notification-layout__content">
         <div className="notification-layout__info">
           <KioskGreeting />

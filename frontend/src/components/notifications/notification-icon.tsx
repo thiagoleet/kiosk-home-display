@@ -1,4 +1,4 @@
-import { Bell, Monitor, Network, Printer, Settings } from "lucide-react";
+import { Info, Monitor, Printer, Wifi, type LucideIcon } from "lucide-react";
 
 import type { NotificationContext } from "../../types/notification";
 
@@ -6,21 +6,20 @@ type NotificationIconProps = {
   context: NotificationContext;
 };
 
+const icons: Record<NotificationContext, LucideIcon> = {
+  printer: Printer,
+  system: Info,
+  network: Wifi,
+  display: Monitor,
+};
+
 export function NotificationIcon({ context }: NotificationIconProps) {
-  switch (context) {
-    case "printer":
-      return <Printer />;
+  const Icon = icons[context];
 
-    case "network":
-      return <Network />;
-
-    case "system":
-      return <Settings />;
-
-    case "display":
-      return <Monitor />;
-
-    default:
-      return <Bell />;
-  }
+  return (
+    <Icon
+      aria-hidden="true"
+      size={40}
+    />
+  );
 }

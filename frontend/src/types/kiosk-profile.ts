@@ -1,4 +1,4 @@
-import type { KioskTheme } from "./theme";
+import type { KioskThemeId } from "./theme";
 
 export type KioskProfile = {
   id: string;
@@ -8,5 +8,5 @@ export type KioskProfile = {
     printer: boolean;
   };
 
-  theme: KioskTheme;
+  theme: KioskThemeId;
 };

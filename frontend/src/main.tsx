@@ -4,13 +4,16 @@ import "./index.css";
 import App from "./app";
 import { WebSocketProvider } from "./providers/websocket-provider";
 import { KioskProvider } from "./providers/kiosk-provider";
+import { ThemeProvider } from "./providers/theme-provider";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <KioskProvider>
-      <WebSocketProvider>
-        <App />
-      </WebSocketProvider>
+      <ThemeProvider>
+        <WebSocketProvider>
+          <App />
+        </WebSocketProvider>
+      </ThemeProvider>
     </KioskProvider>
   </StrictMode>,
 );

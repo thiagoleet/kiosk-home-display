@@ -10,7 +10,6 @@ import { KioskGreeting } from "../kiosk/kiosk-greeting";
 import { KioskClock } from "../kiosk/kiosk-clock";
 
 type HomeLayoutProps = {
-  kioskName: string;
   connectionStatus: WebSocketStatus;
   printerState: PrinterState;
   currentJob: PrintJob | null;
@@ -18,7 +17,6 @@ type HomeLayoutProps = {
 };
 
 export function HomeLayout({
-  kioskName,
   connectionStatus,
   printerState,
   currentJob,
@@ -26,10 +24,7 @@ export function HomeLayout({
 }: HomeLayoutProps) {
   return (
     <section className="home-layout">
-      <KioskHeader
-        name={kioskName}
-        status={connectionStatus}
-      />
+      <KioskHeader status={connectionStatus} />
 
       <div className="home-layout__hero">
         <KioskGreeting />

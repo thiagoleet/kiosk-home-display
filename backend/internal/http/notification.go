@@ -35,6 +35,7 @@ func (h *NotificationHandler) Test(
 	events.PublishNotification(
 		h.bus,
 		events.NewNotification(
+			events.NotificationContextSystem,
 			"Test notification",
 			"This notification came from the Go backend.",
 			events.NotificationInfo,

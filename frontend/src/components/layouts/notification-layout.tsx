@@ -6,22 +6,17 @@ import { KioskHeader } from "../kiosk/kiosk-header";
 import { NotificationList } from "../notifications/notification-list";
 
 type NotificationLayoutProps = {
-  kioskName: string;
   connectionStatus: WebSocketStatus;
   notifications: Notification[];
 };
 
 export function NotificationLayout({
-  kioskName,
   connectionStatus,
   notifications,
 }: NotificationLayoutProps) {
   return (
     <section className="notification-layout">
-      <KioskHeader
-        name={kioskName}
-        status={connectionStatus}
-      />
+      <KioskHeader status={connectionStatus} />
 
       <div className="notification-layout__content">
         <div className="notification-layout__info">

@@ -3,11 +3,14 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./app";
 import { WebSocketProvider } from "./providers/websocket-provider";
+import { KioskProvider } from "./providers/kiosk-provider";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <WebSocketProvider>
-      <App />
-    </WebSocketProvider>
+    <KioskProvider>
+      <WebSocketProvider>
+        <App />
+      </WebSocketProvider>
+    </KioskProvider>
   </StrictMode>,
 );

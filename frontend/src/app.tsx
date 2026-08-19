@@ -9,8 +9,6 @@ import { usePrinter } from "./hooks/use-printer";
 import { useWebSocketContext } from "./hooks/use-websocket-context";
 import { useScreenMode } from "./hooks/use-screen-mode";
 
-import { kioskProfile } from "./profiles";
-
 function App() {
   const { state } = useKioskState();
   const { notifications } = useNotifications();
@@ -25,7 +23,6 @@ function App() {
     <KioskScreen mode={mode}>
       <KioskLayout
         mode={mode}
-        kioskName={kioskProfile.name}
         connectionStatus={status}
         printerState={printerState}
         currentJob={currentJob}

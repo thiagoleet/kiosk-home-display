@@ -9,7 +9,6 @@ import type { Activity } from "../widgets/activity-widget";
 
 type KioskLayoutProps = {
   mode: ScreenMode;
-  kioskName: string;
   connectionStatus: WebSocketStatus;
   printerState: PrinterState;
   currentJob: PrintJob | null;
@@ -19,7 +18,6 @@ type KioskLayoutProps = {
 
 export function KioskLayout({
   mode,
-  kioskName,
   connectionStatus,
   printerState,
   currentJob,
@@ -29,7 +27,6 @@ export function KioskLayout({
   if (mode === "notification") {
     return (
       <NotificationLayout
-        kioskName={kioskName}
         connectionStatus={connectionStatus}
         notifications={notifications}
       />
@@ -38,7 +35,6 @@ export function KioskLayout({
 
   return (
     <HomeLayout
-      kioskName={kioskName}
       connectionStatus={connectionStatus}
       printerState={printerState}
       currentJob={currentJob}

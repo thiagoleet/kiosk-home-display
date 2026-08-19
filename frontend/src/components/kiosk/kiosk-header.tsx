@@ -1,18 +1,20 @@
 import { Circle } from "lucide-react";
 
-import type { WebSocketStatus } from "../../types/websocket";
+import { useKiosk } from "../../hooks/use-kiosk";
+import type { WebSocketStatus } from "../../hooks/use-websocket";
 
 type KioskHeaderProps = {
-  name: string;
   status: WebSocketStatus;
 };
 
-export function KioskHeader({ name, status }: KioskHeaderProps) {
+export function KioskHeader({ status }: KioskHeaderProps) {
+  const { profile } = useKiosk();
+
   const isConnected = status === "connected";
 
   return (
     <header className="kiosk-header">
-      <h1 className="kiosk-name">{name}</h1>
+      <h1 className="kiosk-name">{profile.name}</h1>
 
       <div
         className={`connection-status ${

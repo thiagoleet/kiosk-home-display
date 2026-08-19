@@ -26,6 +26,11 @@ export function KioskHeader({ status, hasNotification }: KioskHeaderProps) {
               size={18}
               aria-hidden="true"
             />
+
+            <span
+              className="notification-indicator__dot"
+              aria-hidden="true"
+            />
           </span>
         )}
 

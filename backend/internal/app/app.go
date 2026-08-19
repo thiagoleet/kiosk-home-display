@@ -13,6 +13,7 @@ import (
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
 	"github.com/thiagoleet/kiosk-home-display/internal/http"
 	"github.com/thiagoleet/kiosk-home-display/internal/idle"
+	"github.com/thiagoleet/kiosk-home-display/internal/notification"
 	"github.com/thiagoleet/kiosk-home-display/internal/printer"
 	"github.com/thiagoleet/kiosk-home-display/internal/scheduler"
 	"github.com/thiagoleet/kiosk-home-display/internal/state"
@@ -20,14 +21,15 @@ import (
 )
 
 type App struct {
-	config     config.Config
-	bus        *events.Bus
-	idle       *idle.Manager
-	display    *display.Manager
-	scheduler  *scheduler.Scheduler
-	printer    *printer.Manager
-	websocket  *websocket.Server
-	httpServer *http.Server
+	config       config.Config
+	bus          *events.Bus
+	idle         *idle.Manager
+	display      *display.Manager
+	scheduler    *scheduler.Scheduler
+	printer      *printer.Manager
+	notification *notification.Manager
+	websocket    *websocket.Server
+	httpServer   *http.Server
 }
 
 func New(cfg config.Config) (*App, error) {
@@ -81,6 +83,8 @@ func New(cfg config.Config) (*App, error) {
 
 	printerManager := printer.NewManager(bus)
 
+	notificationManager := notification.NewManager(bus)
+
 	websocketServer := websocket.NewServer(
 		bus,
 		stateManager,
@@ -97,12 +101,15 @@ func New(cfg config.Config) (*App, error) {
 	)
 
 	return &App{
-		config:     cfg,
-		bus:        bus,
-		idle:       idleManager,
-		display:    displayManager,
-		scheduler:  schedulerManager,
-		printer:    printerManager,
+		config: cfg,
+		bus:    bus,
+
+		idle:         idleManager,
+		display:      displayManager,
+		scheduler:    schedulerManager,
+		printer:      printerManager,
+		notification: notificationManager,
+
 		websocket:  websocketServer,
 		httpServer: httpServer,
 	}, nil
@@ -112,6 +119,7 @@ func (a *App) Run(ctx context.Context) error {
 	a.registerHandlers()
 
 	a.websocket.Start()
+	a.notification.Start()
 
 	if a.config.Idle.Enabled {
 		a.idle.Start()

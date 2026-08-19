@@ -12,3 +12,5 @@ export type WebSocketMessage<T = unknown> = {
   type: WebSocketMessageType;
   data?: T;
 };
+
+export type WebSocketStatus = "connecting" | "connected" | "disconnected";

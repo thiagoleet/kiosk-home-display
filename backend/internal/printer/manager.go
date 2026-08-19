@@ -66,7 +66,10 @@ func (m *Manager) Print(
 
 	m.bus.Publish(events.Event{
 		Type: events.EventPrinterStarted,
-		Data: job,
+		Data: events.PrinterEvent{
+			JobID: job.ID,
+			Name:  job.Name,
+		},
 	})
 
 	go m.simulatePrint(job)
@@ -90,7 +93,10 @@ func (m *Manager) simulatePrint(
 
 	m.bus.Publish(events.Event{
 		Type: events.EventPrinterCompleted,
-		Data: job,
+		Data: events.PrinterEvent{
+			JobID: job.ID,
+			Name:  job.Name,
+		},
 	})
 
 	time.Sleep(1 * time.Second)

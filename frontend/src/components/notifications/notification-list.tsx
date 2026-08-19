@@ -1,4 +1,6 @@
-import type { Notification } from "../types/notification";
+import { NotificationIcon } from "./notification-icon";
+
+import type { Notification } from "../../types/notification";
 
 type NotificationListProps = {
   notifications: Notification[];
@@ -12,9 +14,13 @@ export function NotificationList({ notifications }: NotificationListProps) {
           key={notification.id}
           data-level={notification.level}
         >
-          <strong>{notification.title}</strong>
+          <NotificationIcon context={notification.context} />
 
-          <p>{notification.message}</p>
+          <div>
+            <strong>{notification.title}</strong>
+
+            <p>{notification.message}</p>
+          </div>
         </article>
       ))}
     </section>

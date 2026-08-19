@@ -7,13 +7,14 @@ type NotificationListProps = {
 export function NotificationList({ notifications }: NotificationListProps) {
   return (
     <section>
-      {notifications.map((notification, index) => (
-        <article key={index}>
+      {notifications.map((notification) => (
+        <article
+          key={notification.id}
+          data-level={notification.level}
+        >
           <strong>{notification.title}</strong>
 
           <p>{notification.message}</p>
-
-          <small>{notification.level}</small>
         </article>
       ))}
     </section>

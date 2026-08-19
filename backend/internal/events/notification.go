@@ -1,5 +1,7 @@
 package events
 
+import "github.com/google/uuid"
+
 type NotificationLevel string
 
 const (
@@ -10,9 +12,11 @@ const (
 )
 
 type Notification struct {
-	Title   string            `json:"title"`
-	Message string            `json:"message"`
-	Level   NotificationLevel `json:"level"`
+	ID       string            `json:"id"`
+	Title    string            `json:"title"`
+	Message  string            `json:"message"`
+	Level    NotificationLevel `json:"level"`
+	Duration int               `json:"duration"`
 }
 
 func PublishNotification(
@@ -23,4 +27,19 @@ func PublishNotification(
 		Type: EventNotification,
 		Data: notification,
 	})
+}
+
+func NewNotification(
+	title string,
+	message string,
+	level NotificationLevel,
+	duration int,
+) Notification {
+	return Notification{
+		ID:       uuid.NewString(),
+		Title:    title,
+		Message:  message,
+		Level:    level,
+		Duration: duration,
+	}
 }

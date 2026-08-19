@@ -34,11 +34,12 @@ func (h *NotificationHandler) Test(
 
 	events.PublishNotification(
 		h.bus,
-		events.Notification{
-			Title:   "Test notification",
-			Message: "This notification came from the Go backend.",
-			Level:   events.NotificationInfo,
-		},
+		events.NewNotification(
+			"Test notification",
+			"This notification came from the Go backend.",
+			events.NotificationInfo,
+			5000,
+		),
 	)
 
 	writeJSON(w, http.StatusOK, map[string]string{

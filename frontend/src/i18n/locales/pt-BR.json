@@ -1,0 +1,20 @@
+{
+  "activity.empty": "Nenhuma atividade recente",
+  "activity.title": "Atividade recente",
+  "connection.status": "WebSocket: {{status}}",
+  "display.brightness": "Brilho: {{brightness}}%",
+  "display.power": "Energia: {{power}}",
+  "display.title": "Tela",
+  "greeting.afternoon": "Boa tarde",
+  "greeting.evening": "Boa noite",
+  "greeting.morning": "Bom dia",
+  "notification.active": "Notificação ativa",
+  "printer.job": "Trabalho: {{job}}",
+  "printer.noActiveJobs": "Nenhum trabalho ativo",
+  "printer.printing": "Imprimindo",
+  "printer.ready": "Pronta",
+  "printer.state": "Status: {{state}}",
+  "printer.title": "Impressora",
+  "status.offline": "OFFLINE",
+  "status.online": "ONLINE"
+}

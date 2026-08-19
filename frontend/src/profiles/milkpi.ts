@@ -9,4 +9,5 @@ export const milkpiProfile: KioskProfile = {
   },
 
   theme: "modern",
+  locale: "pt-BR",
 };

@@ -1,4 +1,5 @@
 import type { KioskThemeId } from "./theme";
+import type { Locale } from "../i18n/translations";
 
 export type KioskProfile = {
   id: string;
@@ -9,4 +10,5 @@ export type KioskProfile = {
   };
 
   theme: KioskThemeId;
+  locale: Locale;
 };

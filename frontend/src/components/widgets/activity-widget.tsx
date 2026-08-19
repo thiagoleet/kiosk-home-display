@@ -8,6 +8,7 @@ import {
 
 import type { Activity } from "../../types/activity";
 import type { NotificationContext } from "../../types/notification";
+import { useTranslation } from "../../hooks/use-translation";
 
 type ActivityWidgetProps = {
   activities: Activity[];
@@ -20,28 +21,30 @@ const activityIcons: Record<NotificationContext, LucideIcon> = {
   display: Monitor,
 };
 
-function formatTimestamp(timestamp: string) {
+function formatTimestamp(timestamp: string, locale: string) {
   const date = new Date(timestamp);
 
   if (Number.isNaN(date.getTime())) {
     return null;
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
 }
 
 export function ActivityWidget({ activities }: ActivityWidgetProps) {
+  const { locale, t } = useTranslation();
+
   return (
     <section className="widget activity-widget">
       <div className="widget-title">
-        <span>Recent activity</span>
+        <span>{t("activity.title")}</span>
       </div>
 
       {activities.length === 0 ? (
-        <p className="activity-widget__empty">No recent activity</p>
+        <p className="activity-widget__empty">{t("activity.empty")}</p>
       ) : (
         <ul className="activity-widget__list">
           {activities.map((activity) => (
@@ -65,7 +68,7 @@ export function ActivityWidget({ activities }: ActivityWidgetProps) {
                 className="activity-widget__time"
                 dateTime={activity.timestamp}
               >
-                {formatTimestamp(activity.timestamp)}
+                {formatTimestamp(activity.timestamp, locale)}
               </time>
             </li>
           ))}

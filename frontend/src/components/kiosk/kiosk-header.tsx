@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import type { WebSocketStatus } from "../../hooks/use-websocket";
 import { useKiosk } from "../../hooks/use-kiosk";
+import { useTranslation } from "../../hooks/use-translation";
 
 type KioskHeaderProps = {
   status: WebSocketStatus;
@@ -14,6 +15,7 @@ const ONLINE_STATUS_DURATION = 3000;
 export function KioskHeader({ status, hasNotification }: KioskHeaderProps) {
   const isConnected = status === "connected";
   const { profile } = useKiosk();
+  const { t } = useTranslation();
   const [isConnectionStatusVisible, setConnectionStatusVisible] = useState(true);
   const shouldShowConnectionStatus = !isConnected || isConnectionStatusVisible;
 
@@ -44,7 +46,7 @@ export function KioskHeader({ status, hasNotification }: KioskHeaderProps) {
         {hasNotification && (
           <span
             className="notification-indicator"
-            aria-label="Notification active"
+            aria-label={t("notification.active")}
           >
             <Bell
               size={18}
@@ -76,7 +78,7 @@ export function KioskHeader({ status, hasNotification }: KioskHeaderProps) {
             aria-hidden="true"
           />
 
-          <span>{isConnected ? "ONLINE" : "OFFLINE"}</span>
+          <span>{t(isConnected ? "status.online" : "status.offline")}</span>
         </div>
       </div>
     </header>

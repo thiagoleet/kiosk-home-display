@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "../../hooks/use-translation";
 
-function getCurrentTime() {
-  return new Intl.DateTimeFormat("en-US", {
+function getCurrentTime(locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -9,17 +10,20 @@ function getCurrentTime() {
 }
 
 export function KioskClock() {
-  const [time, setTime] = useState(getCurrentTime);
+  const { locale } = useTranslation();
+  const [time, setTime] = useState(() => getCurrentTime(locale));
 
   useEffect(() => {
+    setTime(getCurrentTime(locale));
+
     const interval = window.setInterval(() => {
-      setTime(getCurrentTime());
+      setTime(getCurrentTime(locale));
     }, 1000);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, []);
+  }, [locale]);
 
   return (
     <time

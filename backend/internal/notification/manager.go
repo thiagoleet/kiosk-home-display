@@ -36,13 +36,22 @@ func (m *Manager) handlePrinterStarted(
 		return
 	}
 
-	m.publish(
+	m.publishNotification(
 		events.NewNotification(
 			events.NotificationContextPrinter,
 			"Impressão iniciada",
 			data.Name,
 			events.NotificationInfo,
 			5000,
+		),
+	)
+
+	m.publishActivity(
+		events.NewActivity(
+			events.NotificationContextPrinter,
+			events.EventPrinterStarted,
+			"Impressão iniciada",
+			data.Name,
 		),
 	)
 }
@@ -55,7 +64,7 @@ func (m *Manager) handlePrinterCompleted(
 		return
 	}
 
-	m.publish(
+	m.publishNotification(
 		events.NewNotification(
 			events.NotificationContextPrinter,
 			"Impressão concluída",
@@ -64,13 +73,31 @@ func (m *Manager) handlePrinterCompleted(
 			5000,
 		),
 	)
+
+	m.publishActivity(
+		events.NewActivity(
+			events.NotificationContextPrinter,
+			events.EventPrinterCompleted,
+			"Impressão concluída",
+			data.Name,
+		),
+	)
 }
 
-func (m *Manager) publish(
+func (m *Manager) publishNotification(
 	notification events.Notification,
 ) {
 	events.PublishNotification(
 		m.bus,
 		notification,
+	)
+}
+
+func (m *Manager) publishActivity(
+	activity events.Activity,
+) {
+	events.PublishActivity(
+		m.bus,
+		activity,
 	)
 }

@@ -16,6 +16,8 @@ const (
 	EventDisplayStateChanged Type = "display.state_changed"
 
 	EventNotification Type = "notification"
+
+	EventActivity Type = "activity"
 )
 
 type Event struct {

@@ -4,12 +4,16 @@ export const modernTheme: KioskTheme = {
   id: "modern",
 
   colors: {
-    background: "#0f1115",
+    background: "#0b0f14",
+    surface: "#111820",
+    surfaceElevated: "#18212c",
+
     foreground: "#f1f5f9",
-    primary: "#60a5fa",
     secondary: "#94a3b8",
     muted: "#64748b",
-    border: "#334155",
+
+    primary: "#60a5fa",
+    border: "#263241",
 
     success: "#4ade80",
     warning: "#fbbf24",

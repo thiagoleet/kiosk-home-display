@@ -46,4 +46,11 @@ export function applyTheme(theme: KioskTheme) {
   root.style.setProperty("--border-width", theme.border.width);
 
   root.style.setProperty("--border-radius", theme.border.radius);
+
+  root.style.setProperty("--color-surface", theme.colors.surface);
+
+  root.style.setProperty(
+    "--color-surface-elevated",
+    theme.colors.surfaceElevated,
+  );
 }

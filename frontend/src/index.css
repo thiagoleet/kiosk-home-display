@@ -1,5 +1,6 @@
 :root {
   font-family: var(--font-family);
+
   color: var(--color-foreground);
   background: var(--color-background);
 
@@ -21,8 +22,11 @@ body,
 
 body {
   overflow: hidden;
+
   background: var(--color-background);
   color: var(--color-foreground);
+
+  font-weight: var(--font-body-weight);
 }
 
 button,
@@ -35,21 +39,25 @@ select {
 .kiosk-screen {
   width: 100%;
   height: 100%;
-  padding: 3vw;
+
+  padding: var(--spacing-lg);
+
+  background: var(--color-background);
+  color: var(--color-foreground);
 }
 
-.home-layout,
-.notification-layout {
-  width: 100%;
-  height: 100%;
-  border: 3px solid currentColor;
-  padding: 1.5rem 2rem;
-}
 
 .kiosk-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+
+  padding-bottom: var(--spacing-md);
+
+  border-bottom:
+    var(--border-width)
+    solid
+    var(--color-border);
 }
 
 .kiosk-name {
@@ -57,14 +65,8 @@ select {
 
   color: var(--color-foreground);
 
-  font-size: clamp(
-    1.5rem,
-    3vw,
-    2.5rem
-  );
-
-  font-weight:
-    var(--font-heading-weight);
+  font-size: 1.25rem;
+  font-weight: var(--font-heading-weight);
 }
 
 .connection-status {
@@ -74,7 +76,9 @@ select {
 
   color: var(--color-muted);
 
-  font-size: 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
 .connection-status--connected {
@@ -116,11 +120,10 @@ select {
   max-width: 850px;
   margin: 3rem auto 0;
 }
-
 .widget {
-  padding: var(--spacing-md);
+  padding: var(--spacing-lg);
 
-  background: var(--color-background);
+  background: var(--color-surface);
 
   border:
     var(--border-width)
@@ -135,21 +138,45 @@ select {
   align-items: center;
   gap: var(--spacing-sm);
 
-  color: var(--color-primary);
+  color: var(--color-secondary);
+
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .printer-widget__state {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--spacing-sm);
+
+  margin-top: var(--spacing-lg);
+
+  font-size: 1.25rem;
+  font-weight: var(--font-heading-weight);
 }
 
 .printer-widget__job {
-  margin-bottom: 0;
+  margin:
+    var(--spacing-sm)
+    0
+    0;
+
+  color: var(--color-secondary);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.activity-widget__empty {
-  margin: 0;
+.printer-widget__state {
+  color: var(--color-success);
+}
+
+.printer-widget[data-state="printing"]
+  .printer-widget__state {
+  color: var(--color-primary);
 }
 
 .activity-widget__item {
@@ -160,10 +187,12 @@ select {
 
 .notification {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--spacing-md);
 
   padding: var(--spacing-lg);
+
+  background: var(--color-surface-elevated);
 
   border:
     var(--border-width)
@@ -178,16 +207,29 @@ select {
   align-items: center;
   justify-content: center;
 
+  flex-shrink: 0;
+
   color: var(--color-primary);
 }
 
+.notification__content {
+  min-width: 0;
+}
+
 .notification__title {
-  font-weight:
-    var(--font-heading-weight);
+  display: block;
+
+  color: var(--color-foreground);
+
+  font-size: 1rem;
+  font-weight: var(--font-heading-weight);
 }
 
 .notification__message {
-  margin: var(--spacing-xs) 0 0;
+  margin:
+    var(--spacing-xs)
+    0
+    0;
 
   color: var(--color-secondary);
 }
@@ -204,13 +246,20 @@ select {
   border-color: var(--color-error);
 }
 
+.notification__icon svg {
+  width: 2rem;
+  height: 2rem;
+
+  stroke-width: 1.75;
+}
+
 .notification-layout__content {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 3rem;
+  gap: var(--spacing-xl);
 
   height: calc(100% - 5rem);
-  margin-top: 2rem;
+  margin-top: var(--spacing-xl);
 }
 
 .notification-layout__info {
@@ -218,19 +267,26 @@ select {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
+  gap: var(--spacing-lg);
 }
 
 .notification-layout__panel {
   display: flex;
   align-items: stretch;
 
-  border: 3px solid currentColor;
-  padding: 2rem;
+  padding: var(--spacing-xl);
+
+  background: var(--color-surface);
+
+  border:
+    var(--border-width)
+    solid
+    var(--color-border);
+
+  border-radius: var(--border-radius);
 }
 
-.notification-layout__panel
-  > section {
+.notification-layout__panel > section {
   width: 100%;
 }
 

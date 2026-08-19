@@ -5,10 +5,14 @@ export type KioskTheme = {
 
   colors: {
     background: string;
+    surface: string;
+    surfaceElevated: string;
+
     foreground: string;
-    primary: string;
     secondary: string;
     muted: string;
+
+    primary: string;
     border: string;
 
     success: string;

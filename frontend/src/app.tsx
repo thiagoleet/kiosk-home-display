@@ -3,15 +3,16 @@ import { KioskLayout } from "./components/kiosk/kiosk-layout";
 import { KioskScreen } from "./components/kiosk/kiosk-screen";
 
 // Hooks
-import { useKioskState } from "./hooks/use-kiosk-state";
+
 import { useNotifications } from "./hooks/use-notifications";
 import { usePrinter } from "./hooks/use-printer";
 import { useWebSocketContext } from "./hooks/use-websocket-context";
 import { useScreenMode } from "./hooks/use-screen-mode";
+import { useActivities } from "./hooks/use-activities";
 
 function App() {
-  const { state } = useKioskState();
-  const { activeNotification, notificationQueue } = useNotifications();
+  const { activeNotification } = useNotifications();
+  const { activities } = useActivities();
   const { state: printerState, currentJob } = usePrinter();
   const { status } = useWebSocketContext();
 
@@ -27,7 +28,7 @@ function App() {
         printerState={printerState}
         currentJob={currentJob}
         notification={activeNotification}
-        activities={[]}
+        activities={activities}
       />
     </KioskScreen>
   );

@@ -8,6 +8,7 @@ const (
 	NotificationContextPrinter NotificationContext = "printer"
 	NotificationContextSystem  NotificationContext = "system"
 	NotificationContextNetwork NotificationContext = "network"
+	NotificationContextDisplay NotificationContext = "display"
 )
 
 type NotificationLevel string

@@ -1,4 +1,4 @@
-export type NotificationContext = "printer" | "system" | "network";
+export type NotificationContext = "printer" | "system" | "network" | "display";
 
 export type NotificationLevel = "info" | "success" | "warning" | "error";
 

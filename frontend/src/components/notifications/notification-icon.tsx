@@ -1,4 +1,4 @@
-import { Bell, Network, Printer, Settings } from "lucide-react";
+import { Bell, Monitor, Network, Printer, Settings } from "lucide-react";
 
 import type { NotificationContext } from "../../types/notification";
 
@@ -16,6 +16,9 @@ export function NotificationIcon({ context }: NotificationIconProps) {
 
     case "system":
       return <Settings />;
+
+    case "display":
+      return <Monitor />;
 
     default:
       return <Bell />;

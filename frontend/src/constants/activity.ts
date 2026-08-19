@@ -1,1 +1,1 @@
-export const MAX_ACTIVITIES = 5;
+export const MAX_ACTIVITIES = 2;

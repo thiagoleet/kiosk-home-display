@@ -1,4 +1,5 @@
 import { Bell, Circle } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import type { WebSocketStatus } from "../../hooks/use-websocket";
 import { useKiosk } from "../../hooks/use-kiosk";
@@ -8,9 +9,32 @@ type KioskHeaderProps = {
   hasNotification: boolean;
 };
 
+const ONLINE_STATUS_DURATION = 3000;
+
 export function KioskHeader({ status, hasNotification }: KioskHeaderProps) {
   const isConnected = status === "connected";
   const { profile } = useKiosk();
+  const [isConnectionStatusVisible, setConnectionStatusVisible] = useState(true);
+  const shouldShowConnectionStatus = !isConnected || isConnectionStatusVisible;
+
+  useEffect(() => {
+    if (!isConnected) {
+      return;
+    }
+
+    const showTimer = window.setTimeout(() => {
+      setConnectionStatusVisible(true);
+    }, 0);
+
+    const hideTimer = window.setTimeout(() => {
+      setConnectionStatusVisible(false);
+    }, ONLINE_STATUS_DURATION);
+
+    return () => {
+      window.clearTimeout(showTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, [isConnected]);
 
   return (
     <header className="kiosk-header">
@@ -35,11 +59,16 @@ export function KioskHeader({ status, hasNotification }: KioskHeaderProps) {
         )}
 
         <div
-          className={`connection-status ${
+          className={[
+            "connection-status",
             isConnected
               ? "connection-status--connected"
-              : "connection-status--disconnected"
-          }`}
+              : "connection-status--disconnected",
+            !shouldShowConnectionStatus && "connection-status--hidden",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          aria-hidden={!shouldShowConnectionStatus}
         >
           <Circle
             size={8}

@@ -1,0 +1,30 @@
+.kiosk-greeting {
+  margin: 0;
+
+  color: var(--color-secondary);
+
+  font-size: clamp(1.5rem, 3vw, 3rem);
+  font-weight: var(--font-heading-weight);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.kiosk-clock {
+  display: block;
+
+  color: var(--color-foreground);
+
+  font-size: clamp(5rem, 13vw, 12rem);
+  font-weight: var(--font-heading-weight);
+  font-variant-numeric: tabular-nums;
+  line-height: 0.9;
+  letter-spacing: -0.075em;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .kiosk-clock {
+    font-size: clamp(4.5rem, 22vw, 7rem);
+  }
+}

@@ -22,9 +22,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-xl);
 
-    animation:
+  padding-bottom: var(--spacing-xl);
+
+  animation:
     home-greeting-enter
     350ms
     cubic-bezier(0.16, 1, 0.3, 1);

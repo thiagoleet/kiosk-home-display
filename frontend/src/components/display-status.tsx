@@ -1,21 +1,20 @@
 import type { DisplayState } from "../types/display";
+import { useTranslation } from "../hooks/use-translation";
 
 type DisplayStatusProps = {
   display: DisplayState;
 };
 
 export function DisplayStatus({ display }: DisplayStatusProps) {
+  const { t } = useTranslation();
+
   return (
     <section>
-      <h2>Display</h2>
+      <h2>{t("display.title")}</h2>
 
-      <p>
-        Power: <strong>{display.power}</strong>
-      </p>
+      <p>{t("display.power", { power: display.power })}</p>
 
-      <p>
-        Brightness: <strong>{display.brightness}%</strong>
-      </p>
+      <p>{t("display.brightness", { brightness: display.brightness })}</p>
     </section>
   );
 }

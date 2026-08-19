@@ -1,5 +1,6 @@
 import type { PrintJob } from "../types/printer";
 import type { PrinterState } from "../hooks/use-printer";
+import { useTranslation } from "../hooks/use-translation";
 
 type PrinterStatusProps = {
   state: PrinterState;
@@ -7,13 +8,15 @@ type PrinterStatusProps = {
 };
 
 export function PrinterStatus({ state, job }: PrinterStatusProps) {
+  const { t } = useTranslation();
+
   return (
     <section>
-      <h2>Printer</h2>
+      <h2>{t("printer.title")}</h2>
 
-      <p>State: {state}</p>
+      <p>{t("printer.state", { state })}</p>
 
-      {job && <p>Job: {job.name}</p>}
+      {job && <p>{t("printer.job", { job: job.name })}</p>}
     </section>
   );
 }

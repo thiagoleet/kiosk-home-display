@@ -1,0 +1,27 @@
+.widget {
+  padding: var(--spacing-lg);
+
+  background: var(--color-surface);
+
+  border:
+    var(--border-width)
+    solid
+    var(--color-border);
+
+  border-radius: var(--border-radius);
+}
+
+.widget-title {
+  display: flex;
+  align-items: center;
+
+  gap: var(--spacing-sm);
+
+  color: var(--color-secondary);
+
+  font-size: 0.8rem;
+  font-weight: 600;
+
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}

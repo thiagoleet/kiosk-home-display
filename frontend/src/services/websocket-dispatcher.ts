@@ -37,9 +37,13 @@ export class WebSocketDispatcher {
   }
 
   dispatch(message: WebSocketMessage) {
+    console.log("[WebSocket Dispatcher]", message);
+
     const handlers = this.handlers.get(message.type);
 
     if (!handlers) {
+      console.log("[WebSocket Dispatcher] no handlers for", message.type);
+
       return;
     }
 

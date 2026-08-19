@@ -5,10 +5,13 @@ type KioskTransitionProps = {
   children: ReactNode;
 };
 
+type TransitionDirection = "forward" | "backward";
+
 type TransitionState = {
   mode: string;
   content: ReactNode;
   phase: "idle" | "exiting" | "entering";
+  direction: TransitionDirection;
 };
 
 const EXIT_DURATION = 200;
@@ -19,6 +22,7 @@ export function KioskTransition({ mode, children }: KioskTransitionProps) {
     mode,
     content: children,
     phase: "idle",
+    direction: "forward",
   });
 
   const pendingContentRef = useRef<ReactNode>(children);
@@ -34,11 +38,19 @@ export function KioskTransition({ mode, children }: KioskTransitionProps) {
       return;
     }
 
+    const previousMode = previousModeRef.current;
+
     previousModeRef.current = mode;
+
+    const direction: TransitionDirection =
+      previousMode === "home" && mode === "notification"
+        ? "forward"
+        : "backward";
 
     setTransition((current) => ({
       ...current,
       phase: "exiting",
+      direction,
     }));
 
     const exitTimer = window.setTimeout(() => {
@@ -46,6 +58,7 @@ export function KioskTransition({ mode, children }: KioskTransitionProps) {
         mode,
         content: pendingContentRef.current,
         phase: "entering",
+        direction,
       });
     }, EXIT_DURATION);
 
@@ -76,6 +89,7 @@ export function KioskTransition({ mode, children }: KioskTransitionProps) {
       className="kiosk-transition"
       data-phase={transition.phase}
       data-mode={transition.mode}
+      data-direction={transition.direction}
     >
       {transition.content}
     </div>

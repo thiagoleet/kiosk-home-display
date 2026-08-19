@@ -87,9 +87,170 @@
   }
 }
 
+@keyframes kiosk-home-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+@keyframes kiosk-notification-enter {
+  from {
+    opacity: 0;
+    transform:
+      translateY(24px)
+      scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+@keyframes kiosk-notification-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+@keyframes kiosk-home-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-greeting-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-footer-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes notification-info-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes notification-panel-enter {
+  from {
+    opacity: 0;
+    transform:
+      translateY(28px)
+      scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+@keyframes home-greeting-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes home-footer-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+}
+
+@keyframes notification-info-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes notification-panel-exit {
+  from {
+    opacity: 1;
+    transform:
+      translateY(0)
+      scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform:
+      translateY(24px)
+      scale(0.98);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .kiosk-transition,
   .notification,
   .notification-indicator,
+  .home-layout__greeting,
+  .home-layout__footer,
+  .notification-layout__info,
+  .notification-layout__panel,
   .spin {
     animation: none;
   }

@@ -43,7 +43,7 @@ func (m *Manager) handlePrinterStarted(
 	m.publishNotification(
 		events.NewNotification(
 			events.NotificationContextPrinter,
-			m.texts.PrinterStarted,
+			m.texts.Text(i18n.KeyPrinterStarted),
 			data.Name,
 			events.NotificationInfo,
 			5000,
@@ -54,7 +54,7 @@ func (m *Manager) handlePrinterStarted(
 		events.NewActivity(
 			events.NotificationContextPrinter,
 			events.EventPrinterStarted,
-			m.texts.PrinterStarted,
+			m.texts.Text(i18n.KeyPrinterStarted),
 			data.Name,
 		),
 	)
@@ -71,7 +71,7 @@ func (m *Manager) handlePrinterCompleted(
 	m.publishNotification(
 		events.NewNotification(
 			events.NotificationContextPrinter,
-			m.texts.PrinterCompleted,
+			m.texts.Text(i18n.KeyPrinterCompleted),
 			data.Name,
 			events.NotificationSuccess,
 			5000,
@@ -82,7 +82,7 @@ func (m *Manager) handlePrinterCompleted(
 		events.NewActivity(
 			events.NotificationContextPrinter,
 			events.EventPrinterCompleted,
-			m.texts.PrinterCompleted,
+			m.texts.Text(i18n.KeyPrinterCompleted),
 			data.Name,
 		),
 	)

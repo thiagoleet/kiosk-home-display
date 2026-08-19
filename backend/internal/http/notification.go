@@ -40,8 +40,8 @@ func (h *NotificationHandler) Test(
 		h.bus,
 		events.NewNotification(
 			events.NotificationContextSystem,
-			h.texts.TestNotificationTitle,
-			h.texts.TestNotificationMessage,
+			h.texts.Text(i18n.KeyTestNotificationTitle),
+			h.texts.Text(i18n.KeyTestNotificationMessage),
 			events.NotificationInfo,
 			5000,
 		),

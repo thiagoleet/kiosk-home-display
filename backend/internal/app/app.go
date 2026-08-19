@@ -35,7 +35,11 @@ type App struct {
 
 func New(cfg config.Config) (*App, error) {
 	bus := events.NewBus()
-	texts := i18n.PtBR()
+
+	texts, err := i18n.LoadPtBR()
+	if err != nil {
+		return nil, fmt.Errorf("load translations: %w", err)
+	}
 
 	controller, err := display.NewController(cfg.Display.Mode)
 	if err != nil {

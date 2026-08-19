@@ -8,6 +8,7 @@ import (
 
 	"github.com/thiagoleet/kiosk-home-display/internal/display"
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
+	"github.com/thiagoleet/kiosk-home-display/internal/i18n"
 	"github.com/thiagoleet/kiosk-home-display/internal/printer"
 	"github.com/thiagoleet/kiosk-home-display/internal/websocket"
 )
@@ -23,6 +24,7 @@ func NewServer(
 	websocketServer *websocket.Server,
 	displayManager *display.Manager,
 	printerManager *printer.Manager,
+	texts i18n.Catalog,
 ) *Server {
 	mux := nethttp.NewServeMux()
 
@@ -30,7 +32,7 @@ func NewServer(
 		displayManager,
 	)
 
-	notificationHandler := NewNotificationHandler(bus)
+	notificationHandler := NewNotificationHandler(bus, texts)
 
 	printerHandler := NewPrinterHandler(
 		printerManager,

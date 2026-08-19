@@ -4,17 +4,21 @@ import (
 	"net/http"
 
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
+	"github.com/thiagoleet/kiosk-home-display/internal/i18n"
 )
 
 type NotificationHandler struct {
-	bus *events.Bus
+	bus   *events.Bus
+	texts i18n.Catalog
 }
 
 func NewNotificationHandler(
 	bus *events.Bus,
+	texts i18n.Catalog,
 ) *NotificationHandler {
 	return &NotificationHandler{
-		bus: bus,
+		bus:   bus,
+		texts: texts,
 	}
 }
 
@@ -36,8 +40,8 @@ func (h *NotificationHandler) Test(
 		h.bus,
 		events.NewNotification(
 			events.NotificationContextSystem,
-			"Test notification",
-			"This notification came from the Go backend.",
+			h.texts.TestNotificationTitle,
+			h.texts.TestNotificationMessage,
 			events.NotificationInfo,
 			5000,
 		),

@@ -2,17 +2,21 @@ package notification
 
 import (
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
+	"github.com/thiagoleet/kiosk-home-display/internal/i18n"
 )
 
 type Manager struct {
-	bus *events.Bus
+	bus   *events.Bus
+	texts i18n.Catalog
 }
 
 func NewManager(
 	bus *events.Bus,
+	texts i18n.Catalog,
 ) *Manager {
 	return &Manager{
-		bus: bus,
+		bus:   bus,
+		texts: texts,
 	}
 }
 
@@ -39,7 +43,7 @@ func (m *Manager) handlePrinterStarted(
 	m.publishNotification(
 		events.NewNotification(
 			events.NotificationContextPrinter,
-			"Impressão iniciada",
+			m.texts.PrinterStarted,
 			data.Name,
 			events.NotificationInfo,
 			5000,
@@ -50,7 +54,7 @@ func (m *Manager) handlePrinterStarted(
 		events.NewActivity(
 			events.NotificationContextPrinter,
 			events.EventPrinterStarted,
-			"Impressão iniciada",
+			m.texts.PrinterStarted,
 			data.Name,
 		),
 	)
@@ -67,7 +71,7 @@ func (m *Manager) handlePrinterCompleted(
 	m.publishNotification(
 		events.NewNotification(
 			events.NotificationContextPrinter,
-			"Impressão concluída",
+			m.texts.PrinterCompleted,
 			data.Name,
 			events.NotificationSuccess,
 			5000,
@@ -78,7 +82,7 @@ func (m *Manager) handlePrinterCompleted(
 		events.NewActivity(
 			events.NotificationContextPrinter,
 			events.EventPrinterCompleted,
-			"Impressão concluída",
+			m.texts.PrinterCompleted,
 			data.Name,
 		),
 	)

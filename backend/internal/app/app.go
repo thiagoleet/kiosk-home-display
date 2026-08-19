@@ -12,6 +12,7 @@ import (
 	"github.com/thiagoleet/kiosk-home-display/internal/display"
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
 	"github.com/thiagoleet/kiosk-home-display/internal/http"
+	"github.com/thiagoleet/kiosk-home-display/internal/i18n"
 	"github.com/thiagoleet/kiosk-home-display/internal/idle"
 	"github.com/thiagoleet/kiosk-home-display/internal/notification"
 	"github.com/thiagoleet/kiosk-home-display/internal/printer"
@@ -34,6 +35,7 @@ type App struct {
 
 func New(cfg config.Config) (*App, error) {
 	bus := events.NewBus()
+	texts := i18n.PtBR()
 
 	controller, err := display.NewController(cfg.Display.Mode)
 	if err != nil {
@@ -83,7 +85,7 @@ func New(cfg config.Config) (*App, error) {
 
 	printerManager := printer.NewManager(bus)
 
-	notificationManager := notification.NewManager(bus)
+	notificationManager := notification.NewManager(bus, texts)
 
 	websocketServer := websocket.NewServer(
 		bus,
@@ -98,6 +100,7 @@ func New(cfg config.Config) (*App, error) {
 		websocketServer,
 		displayManager,
 		printerManager,
+		texts,
 	)
 
 	return &App{

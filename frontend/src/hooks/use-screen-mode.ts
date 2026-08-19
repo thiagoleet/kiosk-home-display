@@ -4,17 +4,14 @@ import type { Notification } from "../types/notification";
 import type { ScreenMode } from "../types/screen";
 
 type UseScreenModeOptions = {
-  notifications: Notification[];
+  notification: Notification | null;
 };
 
-export function useScreenMode({ notifications }: UseScreenModeOptions) {
-  const mode = useMemo<ScreenMode>(() => {
-    if (notifications.length > 0) {
-      return "notification";
-    }
-
-    return "home";
-  }, [notifications]);
+export function useScreenMode({ notification }: UseScreenModeOptions) {
+  const mode = useMemo<ScreenMode>(
+    () => (notification ? "notification" : "home"),
+    [notification],
+  );
 
   return {
     mode,

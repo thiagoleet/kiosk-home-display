@@ -7,12 +7,12 @@ import { NotificationList } from "../notifications/notification-list";
 
 type NotificationLayoutProps = {
   connectionStatus: WebSocketStatus;
-  notifications: Notification[];
+  notification: Notification | null;
 };
 
 export function NotificationLayout({
   connectionStatus,
-  notifications,
+  notification,
 }: NotificationLayoutProps) {
   return (
     <section className="notification-layout">
@@ -26,7 +26,7 @@ export function NotificationLayout({
         </div>
 
         <div className="notification-layout__panel">
-          <NotificationList notifications={notifications} />
+          <NotificationList notification={notification} />
         </div>
       </div>
     </section>

@@ -12,7 +12,7 @@ type KioskLayoutProps = {
   connectionStatus: WebSocketStatus;
   printerState: PrinterState;
   currentJob: PrintJob | null;
-  notifications: Notification[];
+  notification: Notification | null;
   activities: Activity[];
 };
 
@@ -21,14 +21,14 @@ export function KioskLayout({
   connectionStatus,
   printerState,
   currentJob,
-  notifications,
+  notification,
   activities,
 }: KioskLayoutProps) {
-  if (mode === "notification") {
+  if (mode === "notification" && notification) {
     return (
       <NotificationLayout
         connectionStatus={connectionStatus}
-        notifications={notifications}
+        notification={notification}
       />
     );
   }

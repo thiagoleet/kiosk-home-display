@@ -11,12 +11,12 @@ import { useScreenMode } from "./hooks/use-screen-mode";
 
 function App() {
   const { state } = useKioskState();
-  const { notifications } = useNotifications();
+  const { activeNotification, notificationQueue } = useNotifications();
   const { state: printerState, currentJob } = usePrinter();
   const { status } = useWebSocketContext();
 
   const { mode } = useScreenMode({
-    notifications,
+    notification: activeNotification,
   });
 
   return (
@@ -26,7 +26,7 @@ function App() {
         connectionStatus={status}
         printerState={printerState}
         currentJob={currentJob}
-        notifications={notifications}
+        notification={activeNotification}
         activities={[]}
       />
     </KioskScreen>

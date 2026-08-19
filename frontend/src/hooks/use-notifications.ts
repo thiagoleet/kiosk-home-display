@@ -92,5 +92,6 @@ export function useNotifications() {
     activeNotification: state.active,
     notificationQueue: state.queue,
     removeNotification,
+    showNextNotification,
   };
 }

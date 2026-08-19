@@ -116,6 +116,7 @@ func (s *Server) Start() {
 	s.bus.Subscribe(events.EventPrinterCompleted, s.handleEvent)
 
 	s.bus.Subscribe(events.EventNotification, s.handleEvent)
+	s.bus.Subscribe(events.EventActivity, s.handleEvent)
 }
 
 func (s *Server) handleEvent(event events.Event) {

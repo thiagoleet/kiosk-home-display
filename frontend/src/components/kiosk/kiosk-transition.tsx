@@ -1,23 +1,31 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-type KioskTransitionProps = {
-  mode: string;
-  children: ReactNode;
-};
+type TransitionPhase = "idle" | "exiting" | "entering";
 
-type TransitionDirection = "forward" | "backward";
+type TransitionDirection = "forward" | "backward" | "notification";
 
 type TransitionState = {
   mode: string;
   content: ReactNode;
-  phase: "idle" | "exiting" | "entering";
+  phase: TransitionPhase;
   direction: TransitionDirection;
+};
+
+type KioskTransitionProps = {
+  mode: string;
+  transitionKey: string;
+  children: ReactNode;
 };
 
 const EXIT_DURATION = 200;
 const ENTER_DURATION = 350;
+const NOTIFICATION_EXIT_DURATION = 120;
 
-export function KioskTransition({ mode, children }: KioskTransitionProps) {
+export function KioskTransition({
+  mode,
+  transitionKey,
+  children,
+}: KioskTransitionProps) {
   const [transition, setTransition] = useState<TransitionState>({
     mode,
     content: children,
@@ -29,23 +37,44 @@ export function KioskTransition({ mode, children }: KioskTransitionProps) {
 
   const previousModeRef = useRef(mode);
 
+  const previousKeyRef = useRef(transitionKey);
+
+  /**
+   * Always keep the latest content available
+   * without causing a render.
+   *
+   * This is important because the content may
+   * change while the transition is in progress.
+   */
   useEffect(() => {
     pendingContentRef.current = children;
-  });
+  }, [children]);
 
+  /**
+   * Detect changes to the screen or notification.
+   */
   useEffect(() => {
-    if (previousModeRef.current === mode) {
+    if (previousKeyRef.current === transitionKey) {
       return;
     }
 
     const previousMode = previousModeRef.current;
 
-    previousModeRef.current = mode;
+    const isNotificationChange =
+      previousMode === "notification" && mode === "notification";
 
-    const direction: TransitionDirection =
-      previousMode === "home" && mode === "notification"
+    previousModeRef.current = mode;
+    previousKeyRef.current = transitionKey;
+
+    const direction: TransitionDirection = isNotificationChange
+      ? "notification"
+      : previousMode === "home"
         ? "forward"
         : "backward";
+
+    const exitDuration = isNotificationChange
+      ? NOTIFICATION_EXIT_DURATION
+      : EXIT_DURATION;
 
     setTransition((current) => ({
       ...current,
@@ -60,29 +89,35 @@ export function KioskTransition({ mode, children }: KioskTransitionProps) {
         phase: "entering",
         direction,
       });
-    }, EXIT_DURATION);
+    }, exitDuration);
 
     return () => {
       window.clearTimeout(exitTimer);
     };
-  }, [mode]);
+  }, [mode, transitionKey]);
 
+  /**
+   * Finish the entering phase.
+   */
   useEffect(() => {
     if (transition.phase !== "entering") {
       return;
     }
 
-    const enterTimer = window.setTimeout(() => {
-      setTransition((current) => ({
-        ...current,
-        phase: "idle",
-      }));
-    }, ENTER_DURATION);
+    const enterTimer = window.setTimeout(
+      () => {
+        setTransition((current) => ({
+          ...current,
+          phase: "idle",
+        }));
+      },
+      transition.direction === "notification" ? 220 : ENTER_DURATION,
+    );
 
     return () => {
       window.clearTimeout(enterTimer);
     };
-  }, [transition.phase]);
+  }, [transition.phase, transition.direction]);
 
   return (
     <div

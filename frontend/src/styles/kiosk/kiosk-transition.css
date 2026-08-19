@@ -6,3 +6,18 @@
   min-height: 0;
 }
 
+
+.kiosk-transition[data-direction="notification"][data-phase="exiting"] {
+  animation:
+    notification-change-exit
+    120ms
+    ease-in
+    forwards;
+}
+
+.kiosk-transition[data-direction="notification"][data-phase="entering"] {
+  animation:
+    notification-change-enter
+    220ms
+    cubic-bezier(0.16, 1, 0.3, 1);
+}

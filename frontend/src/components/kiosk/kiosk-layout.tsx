@@ -1,4 +1,5 @@
 import { KioskHeader } from "./kiosk-header";
+import { KioskTransition } from "./kiosk-transition";
 
 import { HomeLayout } from "../layouts/home-layout";
 import { NotificationLayout } from "../layouts/notification-layout";
@@ -34,19 +35,25 @@ export function KioskLayout({
         hasNotification={notification !== null}
       />
 
-      <div
-        className="kiosk-layout__content"
-        data-mode={mode}
-      >
-        {mode === "notification" && notification ? (
-          <NotificationLayout notification={notification} />
-        ) : (
-          <HomeLayout
-            printerState={printerState}
-            currentJob={currentJob}
-            activities={activities}
-          />
-        )}
+      <div className="kiosk-layout__content">
+        <KioskTransition
+          mode={mode}
+          transitionKey={
+            mode === "notification"
+              ? (notification?.id ?? "notification")
+              : "home"
+          }
+        >
+          {mode === "notification" && notification ? (
+            <NotificationLayout notification={notification} />
+          ) : (
+            <HomeLayout
+              printerState={printerState}
+              currentJob={currentJob}
+              activities={activities}
+            />
+          )}
+        </KioskTransition>
       </div>
     </section>
   );

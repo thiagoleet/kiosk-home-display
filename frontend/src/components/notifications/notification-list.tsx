@@ -1,28 +1,24 @@
-import { NotificationIcon } from "./notification-icon";
+import { Notification } from "./notification";
 
-import type { Notification } from "../../types/notification";
+import type { Notification as NotificationData } from "../../types/notification";
 
 type NotificationListProps = {
-  notifications: Notification[];
+  notifications: NotificationData[];
 };
 
+const MAX_VISIBLE_NOTIFICATIONS = 3;
+
 export function NotificationList({ notifications }: NotificationListProps) {
+  const visibleNotifications = notifications.slice(-MAX_VISIBLE_NOTIFICATIONS);
+
   return (
-    <section>
-      {notifications.map((notification) => (
-        <article
+    <div className="notification-list">
+      {visibleNotifications.map((notification) => (
+        <Notification
           key={notification.id}
-          data-level={notification.level}
-        >
-          <NotificationIcon context={notification.context} />
-
-          <div>
-            <strong>{notification.title}</strong>
-
-            <p>{notification.message}</p>
-          </div>
-        </article>
+          notification={notification}
+        />
       ))}
-    </section>
+    </div>
   );
 }

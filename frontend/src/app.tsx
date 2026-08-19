@@ -1,19 +1,16 @@
 import { ConnectionStatus } from "./components/connection-status";
 import { DisplayStatus } from "./components/display-status";
+import { NotificationList } from "./components/notification-list";
 import { useKioskState } from "./hooks/use-kiosk-state";
-import { useWebSocket } from "./hooks/use-websocket";
-
-const websocketUrl = "ws://localhost:8080/ws";
+import { useNotifications } from "./hooks/use-notifications";
+import { useWebSocketContext } from "./hooks/use-websocket-context";
 
 function App() {
-  console.log("App render");
+  const { state } = useKioskState();
 
-  const { state, handleMessage } = useKioskState();
+  const { notifications } = useNotifications();
 
-  const { status } = useWebSocket({
-    url: websocketUrl,
-    onMessage: handleMessage,
-  });
+  const { status } = useWebSocketContext();
 
   return (
     <main>
@@ -22,6 +19,8 @@ function App() {
       <ConnectionStatus status={status} />
 
       <DisplayStatus display={state.display} />
+
+      <NotificationList notifications={notifications} />
     </main>
   );
 }

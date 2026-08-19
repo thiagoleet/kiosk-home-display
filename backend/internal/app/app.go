@@ -86,6 +86,7 @@ func New(cfg config.Config) (*App, error) {
 	httpServer := http.NewServer(
 		cfg.HTTP.Host,
 		cfg.HTTP.Port,
+		bus,
 		websocketServer,
 		displayManager,
 	)

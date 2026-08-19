@@ -7,6 +7,7 @@ import (
 	nethttp "net/http"
 
 	"github.com/thiagoleet/kiosk-home-display/internal/display"
+	"github.com/thiagoleet/kiosk-home-display/internal/events"
 	"github.com/thiagoleet/kiosk-home-display/internal/websocket"
 )
 
@@ -17,6 +18,7 @@ type Server struct {
 func NewServer(
 	host string,
 	port int,
+	bus *events.Bus,
 	websocketServer *websocket.Server,
 	displayManager *display.Manager,
 ) *Server {
@@ -25,6 +27,8 @@ func NewServer(
 	displayHandler := NewDisplayHandler(
 		displayManager,
 	)
+
+	notificationHandler := NewNotificationHandler(bus)
 
 	mux.Handle(
 		"/ws",
@@ -49,6 +53,11 @@ func NewServer(
 	mux.HandleFunc(
 		"/api/display/brightness",
 		displayHandler.Brightness,
+	)
+
+	mux.HandleFunc(
+		"/api/notifications/test",
+		notificationHandler.Test,
 	)
 
 	return &Server{

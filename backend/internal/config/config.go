@@ -44,6 +44,7 @@ func Default() Config {
 			Host: "0.0.0.0",
 			Port: 8080,
 			AllowedOrigins: []string{
+				"localhost",
 				"localhost:5173",
 			},
 		},

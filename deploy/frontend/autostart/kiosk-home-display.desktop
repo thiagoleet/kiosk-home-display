@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Kiosk Home Display
+Comment=Launch Kiosk Home Display in Chromium kiosk mode
+Exec=/usr/local/bin/kiosk-home-display-browser
+Terminal=false
+X-GNOME-Autostart-enabled=true

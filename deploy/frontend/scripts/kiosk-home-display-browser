@@ -1,0 +1,30 @@
+#!/bin/sh
+
+set -eu
+
+if command -v chromium >/dev/null 2>&1; then
+  browser="$(command -v chromium)"
+elif command -v chromium-browser >/dev/null 2>&1; then
+  browser="$(command -v chromium-browser)"
+else
+  echo "Chromium was not found. Install the chromium package first." >&2
+  exit 1
+fi
+
+while true; do
+  "$browser" \
+    --kiosk \
+    --no-first-run \
+    --noerrdialogs \
+    --disable-session-crashed-bubble \
+    --disable-features=Translate \
+    --app=http://127.0.0.1/
+
+  exit_code=$?
+
+  if [ "$exit_code" -eq 0 ]; then
+    exit 0
+  fi
+
+  sleep 2
+done

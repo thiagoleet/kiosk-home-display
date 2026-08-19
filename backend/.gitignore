@@ -35,3 +35,8 @@ config.local.json
 
 # Coverage files
 coverage.out
+
+# Database
+data/*.db
+data/*.db-shm
+data/*.db-wal

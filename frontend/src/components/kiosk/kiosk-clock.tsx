@@ -14,13 +14,15 @@ export function KioskClock() {
   const [time, setTime] = useState(() => getCurrentTime(locale));
 
   useEffect(() => {
-    setTime(getCurrentTime(locale));
-
-    const interval = window.setInterval(() => {
+    const updateTime = () => {
       setTime(getCurrentTime(locale));
-    }, 1000);
+    };
+
+    const initialTimer = window.setTimeout(updateTime, 0);
+    const interval = window.setInterval(updateTime, 1000);
 
     return () => {
+      window.clearTimeout(initialTimer);
       window.clearInterval(interval);
     };
   }, [locale]);

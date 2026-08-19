@@ -9,7 +9,7 @@ import type { ScreenMode } from "../../types/screen";
 import type { WebSocketStatus } from "../../hooks/use-websocket";
 import type { PrinterState } from "../../hooks/use-printer";
 import type { PrintJob } from "../../types/printer";
-import type { Activity } from "../widgets/activity-widget";
+import type { Activity } from "../../types/activity";
 
 type KioskLayoutProps = {
   mode: ScreenMode;

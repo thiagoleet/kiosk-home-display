@@ -6,7 +6,8 @@ export type WebSocketMessageType =
   | "schedule.off"
   | "printer.started"
   | "printer.completed"
-  | "notification";
+  | "notification"
+  | "activity";
 
 export type WebSocketMessage<T = unknown> = {
   type: WebSocketMessageType;

@@ -6,7 +6,7 @@ import { PrinterWidget } from "../widgets/printer-widget";
 
 import type { PrintJob } from "../../types/printer";
 import type { PrinterState } from "../../hooks/use-printer";
-import type { Activity } from "../widgets/activity-widget";
+import type { Activity } from "../../types/activity";
 
 type HomeLayoutProps = {
   printerState: PrinterState;

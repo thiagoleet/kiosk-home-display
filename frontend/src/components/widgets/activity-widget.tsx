@@ -1,10 +1,5 @@
 import { Check, Printer } from "lucide-react";
-
-export type Activity = {
-  id: string;
-  type: "printer";
-  message: string;
-};
+import type { Activity } from "../../types/activity";
 
 type ActivityWidgetProps = {
   activities: Activity[];
@@ -28,7 +23,7 @@ export function ActivityWidget({ activities }: ActivityWidgetProps) {
             >
               <Printer size={18} />
 
-              <span>{activity.message}</span>
+              <span>{activity.description}</span>
 
               <Check size={16} />
             </div>

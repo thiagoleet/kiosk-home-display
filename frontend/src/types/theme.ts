@@ -38,4 +38,8 @@ export type KioskTheme = {
     width: string;
     radius: string;
   };
+
+  sounds: {
+    notification: string;
+  };
 };

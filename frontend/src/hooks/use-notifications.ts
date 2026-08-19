@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useWebSocketContext } from "../hooks/use-websocket-context";
+import { useTheme } from "./use-theme";
+import { useWebSocketContext } from "./use-websocket-context";
 import type { Notification } from "../types/notification";
 import type { WebSocketMessage } from "../types/websocket";
 
@@ -14,8 +15,35 @@ export function useNotifications() {
     active: null,
     queue: [],
   });
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  const theme = useTheme();
   const { subscribe } = useWebSocketContext();
+
+  useEffect(() => {
+    const audio = new Audio(theme.sounds.notification);
+
+    audio.preload = "auto";
+    notificationAudioRef.current = audio;
+
+    return () => {
+      audio.pause();
+      notificationAudioRef.current = null;
+    };
+  }, [theme.sounds.notification]);
+
+  const playNotificationSound = useCallback(() => {
+    const audio = notificationAudioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    audio.currentTime = 0;
+    void audio.play().catch(() => {
+      // Browsers can block audio until the user has interacted with the page.
+    });
+  }, []);
 
   const showNextNotification = useCallback(() => {
     setState((current) => {
@@ -53,6 +81,8 @@ export function useNotifications() {
 
     const notification = message.data as Notification;
 
+    playNotificationSound();
+
     setState((current) => {
       if (current.active) {
         return {
@@ -66,7 +96,7 @@ export function useNotifications() {
         queue: current.queue,
       };
     });
-  }, []);
+  }, [playNotificationSound]);
 
   useEffect(() => {
     return subscribe("notification", handleMessage);

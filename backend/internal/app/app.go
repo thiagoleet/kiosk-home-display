@@ -143,6 +143,7 @@ func New(cfg config.Config) (*App, error) {
 		bus,
 		activityRepository,
 		texts,
+		cfg.Activity.LifeSpan,
 	)
 
 	websocketServer := websocket.NewServer(

@@ -57,6 +57,13 @@ func TestDefaultConfig(t *testing.T) {
 			config.Scheduler.Timezone,
 		)
 	}
+
+	if config.Activity.LifeSpan != 7*24*time.Hour {
+		t.Fatalf(
+			"expected activity life span of 7 days, got %s",
+			config.Activity.LifeSpan,
+		)
+	}
 }
 
 func TestLoadOverridesDefaults(t *testing.T) {
@@ -70,6 +77,7 @@ func TestLoadOverridesDefaults(t *testing.T) {
 	t.Setenv("SCHEDULE_ON", "08:00")
 	t.Setenv("SCHEDULE_OFF", "22:00")
 	t.Setenv("TIMEZONE", "America/New_York")
+	t.Setenv("ACTIVITY_LIFE_SPAN", "48h")
 
 	config, err := Load()
 	if err != nil {
@@ -111,6 +119,13 @@ func TestLoadOverridesDefaults(t *testing.T) {
 			config.Scheduler.Timezone,
 		)
 	}
+
+	if config.Activity.LifeSpan != 48*time.Hour {
+		t.Fatalf(
+			"expected 48h activity life span, got %s",
+			config.Activity.LifeSpan,
+		)
+	}
 }
 
 func TestLoadRejectsInvalidDisplayMode(t *testing.T) {
@@ -139,6 +154,26 @@ func TestLoadRejectsInvalidBrightness(t *testing.T) {
 
 func TestLoadRejectsInvalidTimezone(t *testing.T) {
 	t.Setenv("TIMEZONE", "Invalid/Timezone")
+
+	_, err := Load()
+
+	if err == nil {
+		t.Fatal("expected configuration error")
+	}
+}
+
+func TestLoadRejectsInvalidActivityLifeSpan(t *testing.T) {
+	t.Setenv("ACTIVITY_LIFE_SPAN", "not-a-duration")
+
+	_, err := Load()
+
+	if err == nil {
+		t.Fatal("expected configuration error")
+	}
+}
+
+func TestLoadRejectsZeroActivityLifeSpan(t *testing.T) {
+	t.Setenv("ACTIVITY_LIFE_SPAN", "0s")
 
 	_, err := Load()
 

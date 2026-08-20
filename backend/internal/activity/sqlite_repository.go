@@ -145,3 +145,28 @@ func (r *SQLiteRepository) List(
 
 	return activities, nil
 }
+
+func (r *SQLiteRepository) DeleteOlderThan(
+	ctx context.Context,
+	before time.Time,
+) error {
+	const query = `
+		DELETE FROM activities
+		WHERE timestamp < ?
+	`
+
+	_, err := r.db.ExecContext(
+		ctx,
+		query,
+		before.UTC().Format(time.RFC3339Nano),
+	)
+
+	if err != nil {
+		return fmt.Errorf(
+			"failed to delete old activities: %w",
+			err,
+		)
+	}
+
+	return nil
+}

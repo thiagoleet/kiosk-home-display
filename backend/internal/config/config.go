@@ -13,6 +13,7 @@ type Config struct {
 	Display   DisplayConfig
 	Idle      IdleConfig
 	Scheduler SchedulerConfig
+	Activity  ActivityConfig
 }
 
 type HTTPConfig struct {
@@ -38,6 +39,10 @@ type SchedulerConfig struct {
 	Timezone string
 }
 
+type ActivityConfig struct {
+	LifeSpan time.Duration
+}
+
 func Default() Config {
 	return Config{
 		HTTP: HTTPConfig{
@@ -61,6 +66,9 @@ func Default() Config {
 			On:       "07:00",
 			Off:      "23:00",
 			Timezone: "America/Sao_Paulo",
+		},
+		Activity: ActivityConfig{
+			LifeSpan: 7 * 24 * time.Hour,
 		},
 	}
 }
@@ -92,6 +100,12 @@ func (c Config) Validate() error {
 	if c.Idle.Enabled && c.Idle.Timeout <= 0 {
 		return fmt.Errorf(
 			"idle timeout must be greater than zero",
+		)
+	}
+
+	if c.Activity.LifeSpan <= 0 {
+		return fmt.Errorf(
+			"activity life span must be greater than zero",
 		)
 	}
 
@@ -214,6 +228,18 @@ func Load() (Config, error) {
 
 	if value := os.Getenv("TIMEZONE"); value != "" {
 		config.Scheduler.Timezone = value
+	}
+
+	if value := os.Getenv("ACTIVITY_LIFE_SPAN"); value != "" {
+		lifeSpan, err := time.ParseDuration(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid ACTIVITY_LIFE_SPAN: %w",
+				err,
+			)
+		}
+
+		config.Activity.LifeSpan = lifeSpan
 	}
 
 	if err := config.Validate(); err != nil {

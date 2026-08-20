@@ -2,6 +2,7 @@ package activity
 
 import (
 	"context"
+	"time"
 
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
 )
@@ -16,4 +17,9 @@ type Repository interface {
 		ctx context.Context,
 		limit int,
 	) ([]events.Activity, error)
+
+	DeleteOlderThan(
+		ctx context.Context,
+		before time.Time,
+	) error
 }

@@ -3,6 +3,7 @@ package activity
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
 	"github.com/thiagoleet/kiosk-home-display/internal/i18n"
@@ -12,17 +13,20 @@ type Manager struct {
 	bus        *events.Bus
 	repository Repository
 	texts      i18n.Catalog
+	lifeSpan   time.Duration
 }
 
 func NewManager(
 	bus *events.Bus,
 	repository Repository,
 	texts i18n.Catalog,
+	lifeSpan time.Duration,
 ) *Manager {
 	return &Manager{
 		bus:        bus,
 		repository: repository,
 		texts:      texts,
+		lifeSpan:   lifeSpan,
 	}
 }
 
@@ -36,6 +40,16 @@ func (m *Manager) Start() {
 		events.EventPrinterCompleted,
 		m.handlePrinterCompleted,
 	)
+
+	if err := m.repository.DeleteOlderThan(
+		context.Background(),
+		time.Now().Add(-m.lifeSpan),
+	); err != nil {
+		log.Printf(
+			"failed to delete old activities: %v",
+			err,
+		)
+	}
 }
 
 func (m *Manager) handlePrinterStarted(

@@ -6,6 +6,7 @@ import (
 	"log"
 	nethttp "net/http"
 
+	"github.com/thiagoleet/kiosk-home-display/internal/activity"
 	"github.com/thiagoleet/kiosk-home-display/internal/display"
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
 	"github.com/thiagoleet/kiosk-home-display/internal/i18n"
@@ -24,6 +25,7 @@ func NewServer(
 	websocketServer *websocket.Server,
 	displayManager *display.Manager,
 	printerManager *printer.Manager,
+	activityRepository activity.Repository,
 	texts i18n.Catalog,
 ) *Server {
 	mux := nethttp.NewServeMux()
@@ -36,6 +38,10 @@ func NewServer(
 
 	printerHandler := NewPrinterHandler(
 		printerManager,
+	)
+
+	activityHandler := NewActivityHandler(
+		activityRepository,
 	)
 
 	mux.Handle(
@@ -71,6 +77,11 @@ func NewServer(
 	mux.HandleFunc(
 		"/api/printer/print",
 		printerHandler.Print,
+	)
+
+	mux.HandleFunc(
+		"/api/activities",
+		activityHandler.List,
 	)
 
 	return &Server{

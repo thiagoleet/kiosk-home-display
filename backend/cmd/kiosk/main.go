@@ -9,10 +9,31 @@ import (
 
 	"github.com/thiagoleet/kiosk-home-display/internal/app"
 	"github.com/thiagoleet/kiosk-home-display/internal/config"
+	"github.com/thiagoleet/kiosk-home-display/internal/database"
 )
 
 func main() {
 	cfg, err := config.Load()
+
+	databaseConfig := database.DefaultConfig()
+
+	db, err := database.Open(databaseConfig)
+	if err != nil {
+		log.Fatalf(
+			"failed to open database: %v",
+			err,
+		)
+	}
+
+	defer db.Close()
+
+	if err := database.Migrate(db.DB); err != nil {
+		log.Fatalf(
+			"failed to migrate database: %v",
+			err,
+		)
+	}
+
 	if err != nil {
 		log.Fatalf("failed to load configuration: %v", err)
 	}

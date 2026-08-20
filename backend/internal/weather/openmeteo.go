@@ -151,7 +151,7 @@ func (p *OpenMeteoProvider) GetCurrent(
 		ApparentTemperature: data.Current.ApparentTemperature,
 		Humidity:            data.Current.Humidity,
 		WindSpeed:           data.Current.WindSpeed,
-		WeatherCode:         data.Current.WeatherCode,
+		Condition:           conditionFromCode(data.Current.WeatherCode),
 		IsDay:               data.Current.IsDay == 1,
 		Timestamp:           timestamp,
 	}, nil

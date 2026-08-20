@@ -14,7 +14,7 @@ export type Weather = {
   apparentTemperature: number;
   humidity: number;
   windSpeed: number;
-  weatherCode: number;
+  condition: WeatherCondition;
   isDay: boolean;
   timestamp: string;
 };

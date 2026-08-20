@@ -1,4 +1,4 @@
-import notificationSound from "@/assets/sounds/notification.mp3";
+import notificationSound from "../../assets/sounds/notification.mp3";
 import type { KioskTheme } from "@/types/theme";
 
 export const modernTheme: KioskTheme = {
@@ -44,4 +44,5 @@ export const modernTheme: KioskTheme = {
   sounds: {
     notification: notificationSound,
   },
+  icons: {},
 };

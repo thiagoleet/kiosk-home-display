@@ -126,9 +126,18 @@ func (p *OpenMeteoProvider) GetCurrent(
 		)
 	}
 
-	timestamp, err := time.Parse(
-		time.RFC3339,
+	location, err := time.LoadLocation(timezone)
+	if err != nil {
+		return CurrentWeather{}, fmt.Errorf(
+			"load weather timezone: %w",
+			err,
+		)
+	}
+
+	timestamp, err := time.ParseInLocation(
+		"2006-01-02T15:04",
 		data.Current.Time,
+		location,
 	)
 	if err != nil {
 		return CurrentWeather{}, fmt.Errorf(

@@ -153,6 +153,7 @@ func New(cfg config.Config) (*App, error) {
 	)
 
 	weatherService := weather.NewService(
+		cfg.Weather.Enabled,
 		weatherProvider,
 		weather.Location{
 			Latitude:  cfg.Weather.Latitude,

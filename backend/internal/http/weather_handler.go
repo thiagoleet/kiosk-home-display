@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	nethttp "net/http"
 
 	"github.com/thiagoleet/kiosk-home-display/internal/weather"
@@ -23,10 +24,20 @@ func (h *WeatherHandler) Current(
 	w nethttp.ResponseWriter,
 	r *nethttp.Request,
 ) {
-	weather, err := h.service.GetCurrent(
+	currentWeather, err := h.service.GetCurrent(
 		r.Context(),
 	)
 	if err != nil {
+		if errors.Is(err, weather.ErrDisabled) {
+			nethttp.Error(
+				w,
+				"Weather Forecast is not enabled for this device",
+				nethttp.StatusServiceUnavailable,
+			)
+
+			return
+		}
+
 		nethttp.Error(
 			w,
 			"failed to get weather",
@@ -44,7 +55,7 @@ func (h *WeatherHandler) Current(
 	w.WriteHeader(nethttp.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(
-		weather,
+		currentWeather,
 	); err != nil {
 		return
 	}

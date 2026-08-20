@@ -1,6 +1,11 @@
 package weather
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+var ErrDisabled = errors.New("weather forecast is not enabled")
 
 type Location struct {
 	Latitude  float64
@@ -11,21 +16,28 @@ type Location struct {
 type Service struct {
 	provider Provider
 	location Location
+	enabled  bool
 }
 
 func NewService(
+	enabled bool,
 	provider Provider,
 	location Location,
 ) *Service {
 	return &Service{
 		provider: provider,
 		location: location,
+		enabled:  enabled,
 	}
 }
 
 func (s *Service) GetCurrent(
 	ctx context.Context,
 ) (CurrentWeather, error) {
+	if !s.enabled {
+		return CurrentWeather{}, ErrDisabled
+	}
+
 	return s.provider.GetCurrent(
 		ctx,
 		s.location.Latitude,

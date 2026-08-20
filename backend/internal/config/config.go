@@ -14,6 +14,7 @@ type Config struct {
 	Idle      IdleConfig
 	Scheduler SchedulerConfig
 	Activity  ActivityConfig
+	Weather   WeatherConfig
 }
 
 type HTTPConfig struct {
@@ -43,6 +44,15 @@ type ActivityConfig struct {
 	LifeSpan time.Duration
 }
 
+type WeatherConfig struct {
+	Enabled         bool
+	OpenMeteoAPIURL string
+	Latitude        float64
+	Longitude       float64
+	Timezone        string
+	CacheTTL        time.Duration
+}
+
 func Default() Config {
 	return Config{
 		HTTP: HTTPConfig{
@@ -69,6 +79,14 @@ func Default() Config {
 		},
 		Activity: ActivityConfig{
 			LifeSpan: 7 * 24 * time.Hour,
+		},
+		Weather: WeatherConfig{
+			Enabled:         false,
+			OpenMeteoAPIURL: "https://api.open-meteo.com/v1/forecast",
+			Latitude:        -23.55052,
+			Longitude:       -46.633308,
+			Timezone:        "America/Sao_Paulo",
+			CacheTTL:        5 * time.Minute,
 		},
 	}
 }
@@ -107,6 +125,46 @@ func (c Config) Validate() error {
 		return fmt.Errorf(
 			"activity life span must be greater than zero",
 		)
+	}
+
+	if c.Weather.Enabled {
+		if c.Weather.OpenMeteoAPIURL == "" {
+			return fmt.Errorf(
+				"open meteo api url cannot be empty",
+			)
+		}
+
+		if c.Weather.Latitude < -90 || c.Weather.Latitude > 90 {
+			return fmt.Errorf(
+				"weather latitude must be between -90 and 90",
+			)
+		}
+
+		if c.Weather.Longitude < -180 || c.Weather.Longitude > 180 {
+			return fmt.Errorf(
+				"weather longitude must be between -180 and 180",
+			)
+		}
+
+		if c.Weather.Timezone == "" {
+			return fmt.Errorf(
+				"weather timezone cannot be empty",
+			)
+		}
+
+		if _, err := time.LoadLocation(c.Weather.Timezone); err != nil {
+			return fmt.Errorf(
+				"invalid weather timezone %q: %w",
+				c.Weather.Timezone,
+				err,
+			)
+		}
+
+		if c.Weather.CacheTTL <= 0 {
+			return fmt.Errorf(
+				"weather cache ttl must be greater than zero",
+			)
+		}
 	}
 
 	if c.Scheduler.Enabled {
@@ -240,6 +298,62 @@ func Load() (Config, error) {
 		}
 
 		config.Activity.LifeSpan = lifeSpan
+	}
+
+	if value := os.Getenv("WEATHER_ENABLED"); value != "" {
+		enabled, err := strconv.ParseBool(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid WEATHER_ENABLED: %w",
+				err,
+			)
+		}
+
+		config.Weather.Enabled = enabled
+	}
+
+	if value := os.Getenv("OPEN_METEO_API_URL"); value != "" {
+		config.Weather.OpenMeteoAPIURL = value
+	}
+
+	if value := os.Getenv("WEATHER_LATITUDE"); value != "" {
+		latitude, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid WEATHER_LATITUDE: %w",
+				err,
+			)
+		}
+
+		config.Weather.Latitude = latitude
+	}
+
+	if value := os.Getenv("WEATHER_LONGITUDE"); value != "" {
+		longitude, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid WEATHER_LONGITUDE: %w",
+				err,
+			)
+		}
+
+		config.Weather.Longitude = longitude
+	}
+
+	if value := os.Getenv("WEATHER_TIMEZONE"); value != "" {
+		config.Weather.Timezone = value
+	}
+
+	if value := os.Getenv("WEATHER_CACHE_TTL"); value != "" {
+		cacheTTL, err := time.ParseDuration(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid WEATHER_CACHE_TTL: %w",
+				err,
+			)
+		}
+
+		config.Weather.CacheTTL = cacheTTL
 	}
 
 	if err := config.Validate(); err != nil {

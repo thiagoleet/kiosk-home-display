@@ -64,6 +64,31 @@ func TestDefaultConfig(t *testing.T) {
 			config.Activity.LifeSpan,
 		)
 	}
+
+	if config.Weather.Enabled {
+		t.Fatal("expected weather to be disabled")
+	}
+
+	if config.Weather.OpenMeteoAPIURL != "https://api.open-meteo.com/v1/forecast" {
+		t.Fatalf(
+			"expected default Open-Meteo API URL, got %q",
+			config.Weather.OpenMeteoAPIURL,
+		)
+	}
+
+	if config.Weather.Timezone != "America/Sao_Paulo" {
+		t.Fatalf(
+			"expected weather timezone America/Sao_Paulo, got %q",
+			config.Weather.Timezone,
+		)
+	}
+
+	if config.Weather.CacheTTL != 5*time.Minute {
+		t.Fatalf(
+			"expected weather cache ttl of 5 minutes, got %s",
+			config.Weather.CacheTTL,
+		)
+	}
 }
 
 func TestLoadOverridesDefaults(t *testing.T) {
@@ -78,6 +103,12 @@ func TestLoadOverridesDefaults(t *testing.T) {
 	t.Setenv("SCHEDULE_OFF", "22:00")
 	t.Setenv("TIMEZONE", "America/New_York")
 	t.Setenv("ACTIVITY_LIFE_SPAN", "48h")
+	t.Setenv("WEATHER_ENABLED", "true")
+	t.Setenv("OPEN_METEO_API_URL", "https://weather.example.com/forecast")
+	t.Setenv("WEATHER_LATITUDE", "40.7128")
+	t.Setenv("WEATHER_LONGITUDE", "-74.0060")
+	t.Setenv("WEATHER_TIMEZONE", "America/New_York")
+	t.Setenv("WEATHER_CACHE_TTL", "10m")
 
 	config, err := Load()
 	if err != nil {
@@ -124,6 +155,45 @@ func TestLoadOverridesDefaults(t *testing.T) {
 		t.Fatalf(
 			"expected 48h activity life span, got %s",
 			config.Activity.LifeSpan,
+		)
+	}
+
+	if !config.Weather.Enabled {
+		t.Fatal("expected weather to be enabled")
+	}
+
+	if config.Weather.OpenMeteoAPIURL != "https://weather.example.com/forecast" {
+		t.Fatalf(
+			"expected configured Open-Meteo API URL, got %q",
+			config.Weather.OpenMeteoAPIURL,
+		)
+	}
+
+	if config.Weather.Latitude != 40.7128 {
+		t.Fatalf(
+			"expected weather latitude 40.7128, got %f",
+			config.Weather.Latitude,
+		)
+	}
+
+	if config.Weather.Longitude != -74.0060 {
+		t.Fatalf(
+			"expected weather longitude -74.0060, got %f",
+			config.Weather.Longitude,
+		)
+	}
+
+	if config.Weather.Timezone != "America/New_York" {
+		t.Fatalf(
+			"expected weather timezone America/New_York, got %q",
+			config.Weather.Timezone,
+		)
+	}
+
+	if config.Weather.CacheTTL != 10*time.Minute {
+		t.Fatalf(
+			"expected weather cache ttl 10m, got %s",
+			config.Weather.CacheTTL,
 		)
 	}
 }
@@ -174,6 +244,50 @@ func TestLoadRejectsInvalidActivityLifeSpan(t *testing.T) {
 
 func TestLoadRejectsZeroActivityLifeSpan(t *testing.T) {
 	t.Setenv("ACTIVITY_LIFE_SPAN", "0s")
+
+	_, err := Load()
+
+	if err == nil {
+		t.Fatal("expected configuration error")
+	}
+}
+
+func TestLoadRejectsInvalidWeatherLatitude(t *testing.T) {
+	t.Setenv("WEATHER_ENABLED", "true")
+	t.Setenv("WEATHER_LATITUDE", "invalid")
+
+	_, err := Load()
+
+	if err == nil {
+		t.Fatal("expected configuration error")
+	}
+}
+
+func TestLoadRejectsWeatherLatitudeOutOfRange(t *testing.T) {
+	t.Setenv("WEATHER_ENABLED", "true")
+	t.Setenv("WEATHER_LATITUDE", "100")
+
+	_, err := Load()
+
+	if err == nil {
+		t.Fatal("expected configuration error")
+	}
+}
+
+func TestLoadRejectsInvalidWeatherTimezone(t *testing.T) {
+	t.Setenv("WEATHER_ENABLED", "true")
+	t.Setenv("WEATHER_TIMEZONE", "Invalid/Timezone")
+
+	_, err := Load()
+
+	if err == nil {
+		t.Fatal("expected configuration error")
+	}
+}
+
+func TestLoadRejectsZeroWeatherCacheTTL(t *testing.T) {
+	t.Setenv("WEATHER_ENABLED", "true")
+	t.Setenv("WEATHER_CACHE_TTL", "0s")
 
 	_, err := Load()
 

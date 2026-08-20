@@ -11,6 +11,7 @@ import (
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
 	"github.com/thiagoleet/kiosk-home-display/internal/i18n"
 	"github.com/thiagoleet/kiosk-home-display/internal/printer"
+	"github.com/thiagoleet/kiosk-home-display/internal/weather"
 	"github.com/thiagoleet/kiosk-home-display/internal/websocket"
 )
 
@@ -26,6 +27,7 @@ func NewServer(
 	displayManager *display.Manager,
 	printerManager *printer.Manager,
 	activityRepository activity.Repository,
+	weatherService *weather.Service,
 	texts i18n.Catalog,
 	allowedOrigins []string,
 ) *Server {
@@ -43,6 +45,10 @@ func NewServer(
 
 	activityHandler := NewActivityHandler(
 		activityRepository,
+	)
+
+	weatherHandler := NewWeatherHandler(
+		weatherService,
 	)
 
 	mux.Handle(
@@ -83,6 +89,11 @@ func NewServer(
 	mux.HandleFunc(
 		"/api/activities",
 		activityHandler.List,
+	)
+
+	mux.HandleFunc(
+		"/api/weather",
+		weatherHandler.Current,
 	)
 
 	return &Server{

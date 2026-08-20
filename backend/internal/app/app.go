@@ -20,6 +20,7 @@ import (
 	"github.com/thiagoleet/kiosk-home-display/internal/printer"
 	"github.com/thiagoleet/kiosk-home-display/internal/scheduler"
 	"github.com/thiagoleet/kiosk-home-display/internal/state"
+	"github.com/thiagoleet/kiosk-home-display/internal/weather"
 	"github.com/thiagoleet/kiosk-home-display/internal/websocket"
 )
 
@@ -146,6 +147,20 @@ func New(cfg config.Config) (*App, error) {
 		cfg.Activity.LifeSpan,
 	)
 
+	weatherProvider := weather.NewOpenMeteoProvider(
+		nil,
+		cfg.Weather.OpenMeteoAPIURL,
+	)
+
+	weatherService := weather.NewService(
+		weatherProvider,
+		weather.Location{
+			Latitude:  cfg.Weather.Latitude,
+			Longitude: cfg.Weather.Longitude,
+			Timezone:  cfg.Weather.Timezone,
+		},
+	)
+
 	websocketServer := websocket.NewServer(
 		bus,
 		stateManager,
@@ -160,6 +175,7 @@ func New(cfg config.Config) (*App, error) {
 		displayManager,
 		printerManager,
 		activityRepository,
+		weatherService,
 		texts,
 		cfg.HTTP.AllowedOrigins,
 	)

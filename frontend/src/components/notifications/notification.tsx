@@ -14,7 +14,10 @@ export function Notification({ notification }: NotificationProps) {
       data-level={notification.level}
     >
       <div className="notification__icon">
-        <NotificationIcon context={notification.context} />
+        <NotificationIcon
+          context={notification.context}
+          level={notification.level}
+        />
       </div>
 
       <div className="notification__content">

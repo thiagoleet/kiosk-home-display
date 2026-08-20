@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from "react";
 import type { ScreenMode } from "../../types/screen";
 import { useKioskState } from "../../hooks/use-kiosk-state";
 import { ScreenSaver } from "../screensaver/screensaver";
+import { KioskTransition } from "./kiosk-transition";
 
 type KioskScreenProps = {
   mode: ScreenMode;
@@ -17,13 +18,7 @@ export function KioskScreen({ mode, children }: KioskScreenProps) {
     [state.display.power],
   );
 
-  const ScreenDisplay = useMemo(() => {
-    if (isScreenOn) {
-      return children;
-    }
-
-    return <ScreenSaver />;
-  }, [children, isScreenOn]);
+  const ScreenDisplay = isScreenOn ? children : <ScreenSaver />;
 
   return (
     <main
@@ -31,7 +26,12 @@ export function KioskScreen({ mode, children }: KioskScreenProps) {
       data-screen-mode={mode}
       data-screen-on={isScreenOn}
     >
-      {ScreenDisplay}
+      <KioskTransition
+        mode="screen"
+        transitionKey={isScreenOn ? "on" : "off"}
+      >
+        {ScreenDisplay}
+      </KioskTransition>
     </main>
   );
 }

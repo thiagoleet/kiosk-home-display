@@ -7,13 +7,21 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/joho/godotenv"
 	"github.com/thiagoleet/kiosk-home-display/internal/app"
 	"github.com/thiagoleet/kiosk-home-display/internal/config"
 	"github.com/thiagoleet/kiosk-home-display/internal/database"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
+		log.Fatalf("failed to load .env file: %v", err)
+	}
+
 	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("failed to load configuration: %v", err)
+	}
 
 	databaseConfig := database.DefaultConfig()
 
@@ -32,10 +40,6 @@ func main() {
 			"failed to migrate database: %v",
 			err,
 		)
-	}
-
-	if err != nil {
-		log.Fatalf("failed to load configuration: %v", err)
 	}
 
 	ctx, stop := signal.NotifyContext(

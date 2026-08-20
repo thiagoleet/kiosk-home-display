@@ -1,3 +1,5 @@
+import type { ComponentType } from "react";
+
 export type KioskThemeId = "modern" | "retro-16bit";
 
 export type KioskTheme = {
@@ -7,6 +9,7 @@ export type KioskTheme = {
   spacing: KioskThemeSpacing;
   border: KioskThemeBorder;
   sounds: KioskThemeSounds;
+  icons: KioskThemeIcons;
 };
 
 export type KioskThemeColors = {
@@ -47,4 +50,32 @@ export type KioskThemeBorder = {
 
 export type KioskThemeSounds = {
   notification: string;
+};
+
+export type KioskThemeIcons = Partial<
+  Record<ThemeIconName, ComponentType<ThemeIconProps>>
+>;
+
+export type ThemeIconName =
+  | "notification"
+  | "notification.info"
+  | "notification.success"
+  | "notification.warning"
+  | "notification.error"
+  | "printer"
+  | "wifi"
+  | "wifi-off"
+  | "weather.clear"
+  | "weather.partly_cloudy"
+  | "weather.overcast"
+  | "weather.fog"
+  | "weather.drizzle"
+  | "weather.rain"
+  | "weather.rain_showers"
+  | "weather.snow"
+  | "weather.thunderstorm";
+
+export type ThemeIconProps = {
+  size?: number | string;
+  className?: string;
 };

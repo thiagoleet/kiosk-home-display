@@ -1,7 +1,7 @@
-import type { ComponentProps } from "react";
+import { createElement, type ComponentProps } from "react";
 
-import { resolveThemeIcon } from "../../theme/resolve-theme-icon";
-import type { ThemeIconName } from "../../theme/theme-icons";
+import { defaultIcons } from "../../themes/icons/default-icons";
+import type { ThemeIconName } from "../../types/theme";
 import { useTheme } from "../../hooks/use-theme";
 
 type ThemeIconProps = {
@@ -9,9 +9,13 @@ type ThemeIconProps = {
 } & Omit<ComponentProps<"svg">, "name">;
 
 export function ThemeIcon({ name, ...props }: ThemeIconProps) {
-  const { icons } = useTheme();
+  const theme = useTheme();
 
-  const Icon = resolveThemeIcon(name, icons);
+  const Icon = theme.icons[name] ?? defaultIcons[name];
 
-  return <Icon {...props} />;
+  if (!Icon) {
+    return null;
+  }
+
+  return createElement(Icon, props);
 }

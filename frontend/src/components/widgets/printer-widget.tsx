@@ -1,15 +1,10 @@
 import { CheckCircle, LoaderCircle, Printer } from "lucide-react";
 
-import type { PrintJob } from "../../types/printer";
-import type { PrinterState } from "../../hooks/use-printer";
+import { usePrinter } from "../../hooks/use-printer";
 import { useTranslation } from "../../hooks/use-translation";
 
-type PrinterWidgetProps = {
-  state: PrinterState;
-  job: PrintJob | null;
-};
-
-export function PrinterWidget({ state, job }: PrinterWidgetProps) {
+export function PrinterWidget() {
+  const { state, currentJob } = usePrinter();
   const isPrinting = state === "printing";
   const { t } = useTranslation();
 
@@ -43,7 +38,7 @@ export function PrinterWidget({ state, job }: PrinterWidgetProps) {
       </div>
 
       <p className="printer-widget__job">
-        {job?.name ?? t("printer.noActiveJobs")}
+        {currentJob?.name ?? t("printer.noActiveJobs")}
       </p>
     </section>
   );

@@ -1,22 +1,24 @@
 import { Bell, Circle } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import type { WebSocketStatus } from "../../hooks/use-websocket";
 import { useKiosk } from "../../hooks/use-kiosk";
 import { useTranslation } from "../../hooks/use-translation";
+import { useWebSocketContext } from "../../hooks/use-websocket-context";
 
 type KioskHeaderProps = {
-  status: WebSocketStatus;
   hasNotification: boolean;
 };
 
 const ONLINE_STATUS_DURATION = 3000;
 
-export function KioskHeader({ status, hasNotification }: KioskHeaderProps) {
+export function KioskHeader({ hasNotification }: KioskHeaderProps) {
+  const { status } = useWebSocketContext();
+
   const isConnected = status === "connected";
   const { profile } = useKiosk();
   const { t } = useTranslation();
-  const [isConnectionStatusVisible, setConnectionStatusVisible] = useState(true);
+  const [isConnectionStatusVisible, setConnectionStatusVisible] =
+    useState(true);
   const shouldShowConnectionStatus = !isConnected || isConnectionStatusVisible;
 
   useEffect(() => {

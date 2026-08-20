@@ -1,18 +1,9 @@
-import {
-  Info,
-  Monitor,
-  Printer,
-  Wifi,
-  type LucideIcon,
-} from "lucide-react";
+import { Info, Monitor, Printer, Wifi, type LucideIcon } from "lucide-react";
 
-import type { Activity } from "../../types/activity";
 import type { NotificationContext } from "../../types/notification";
-import { useTranslation } from "../../hooks/use-translation";
 
-type ActivityWidgetProps = {
-  activities: Activity[];
-};
+import { useTranslation } from "../../hooks/use-translation";
+import { useActivities } from "../../hooks/use-activities";
 
 const activityIcons: Record<NotificationContext, LucideIcon> = {
   printer: Printer,
@@ -34,8 +25,10 @@ function formatTimestamp(timestamp: string, locale: string) {
   }).format(date);
 }
 
-export function ActivityWidget({ activities }: ActivityWidgetProps) {
+export function ActivityWidget() {
   const { locale, t } = useTranslation();
+
+  const { activities } = useActivities();
 
   return (
     <section className="widget activity-widget">
@@ -55,7 +48,9 @@ export function ActivityWidget({ activities }: ActivityWidgetProps) {
               <ActivityIcon context={activity.context} />
 
               <div className="activity-widget__content">
-                <strong className="activity-widget__title">{activity.title}</strong>
+                <strong className="activity-widget__title">
+                  {activity.title}
+                </strong>
 
                 {activity.description && (
                   <p className="activity-widget__message">
@@ -82,7 +77,10 @@ function ActivityIcon({ context }: { context: NotificationContext }) {
   const Icon = activityIcons[context];
 
   return (
-    <span className="activity-widget__icon" aria-hidden="true">
+    <span
+      className="activity-widget__icon"
+      aria-hidden="true"
+    >
       <Icon size={18} />
     </span>
   );

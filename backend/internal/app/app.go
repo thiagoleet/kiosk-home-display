@@ -8,7 +8,9 @@ import (
 	nethttp "net/http"
 	"time"
 
+	"github.com/thiagoleet/kiosk-home-display/internal/activity"
 	"github.com/thiagoleet/kiosk-home-display/internal/config"
+	"github.com/thiagoleet/kiosk-home-display/internal/database"
 	"github.com/thiagoleet/kiosk-home-display/internal/display"
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
 	"github.com/thiagoleet/kiosk-home-display/internal/http"
@@ -24,11 +26,13 @@ import (
 type App struct {
 	config       config.Config
 	bus          *events.Bus
+	db           *database.Database
 	idle         *idle.Manager
 	display      *display.Manager
 	scheduler    *scheduler.Scheduler
 	printer      *printer.Manager
 	notification *notification.Manager
+	activity     *activity.Manager
 	websocket    *websocket.Server
 	httpServer   *http.Server
 }
@@ -36,13 +40,41 @@ type App struct {
 func New(cfg config.Config) (*App, error) {
 	bus := events.NewBus()
 
-	texts, err := i18n.LoadPtBR()
+	databaseConfig := database.DefaultConfig()
+
+	db, err := database.Open(databaseConfig)
 	if err != nil {
-		return nil, fmt.Errorf("load translations: %w", err)
+		return nil, fmt.Errorf(
+			"open database: %w",
+			err,
+		)
 	}
 
-	controller, err := display.NewController(cfg.Display.Mode)
+	if err := database.Migrate(db.DB); err != nil {
+		db.Close()
+
+		return nil, fmt.Errorf(
+			"migrate database: %w",
+			err,
+		)
+	}
+
+	texts, err := i18n.LoadPtBR()
 	if err != nil {
+		db.Close()
+
+		return nil, fmt.Errorf(
+			"load translations: %w",
+			err,
+		)
+	}
+
+	controller, err := display.NewController(
+		cfg.Display.Mode,
+	)
+	if err != nil {
+		db.Close()
+
 		return nil, fmt.Errorf(
 			"create display controller: %w",
 			err,
@@ -57,6 +89,8 @@ func New(cfg config.Config) (*App, error) {
 	if err := displayManager.SetBrightness(
 		cfg.Display.Brightness,
 	); err != nil {
+		db.Close()
+
 		return nil, fmt.Errorf(
 			"set initial display brightness: %w",
 			err,
@@ -68,8 +102,12 @@ func New(cfg config.Config) (*App, error) {
 		cfg.Idle.Timeout,
 	)
 
-	location, err := time.LoadLocation(cfg.Scheduler.Timezone)
+	location, err := time.LoadLocation(
+		cfg.Scheduler.Timezone,
+	)
 	if err != nil {
+		db.Close()
+
 		return nil, fmt.Errorf(
 			"load scheduler timezone: %w",
 			err,
@@ -85,11 +123,27 @@ func New(cfg config.Config) (*App, error) {
 		location,
 	)
 
-	stateManager := state.NewManager(displayManager)
+	stateManager := state.NewManager(
+		displayManager,
+	)
 
-	printerManager := printer.NewManager(bus)
+	printerManager := printer.NewManager(
+		bus,
+	)
 
-	notificationManager := notification.NewManager(bus, texts)
+	notificationManager := notification.NewManager(
+		bus,
+		texts,
+	)
+
+	activityRepository :=
+		activity.NewSQLiteRepository(db.DB)
+
+	activityManager := activity.NewManager(
+		bus,
+		activityRepository,
+		texts,
+	)
 
 	websocketServer := websocket.NewServer(
 		bus,
@@ -104,18 +158,21 @@ func New(cfg config.Config) (*App, error) {
 		websocketServer,
 		displayManager,
 		printerManager,
+		activityRepository,
 		texts,
 	)
 
 	return &App{
 		config: cfg,
 		bus:    bus,
+		db:     db,
 
 		idle:         idleManager,
 		display:      displayManager,
 		scheduler:    schedulerManager,
 		printer:      printerManager,
 		notification: notificationManager,
+		activity:     activityManager,
 
 		websocket:  websocketServer,
 		httpServer: httpServer,
@@ -127,6 +184,7 @@ func (a *App) Run(ctx context.Context) error {
 
 	a.websocket.Start()
 	a.notification.Start()
+	a.activity.Start()
 
 	if a.config.Idle.Enabled {
 		a.idle.Start()
@@ -138,7 +196,10 @@ func (a *App) Run(ctx context.Context) error {
 
 	go func() {
 		if err := a.httpServer.Start(); err != nil {
-			if !errors.Is(err, nethttp.ErrServerClosed) {
+			if !errors.Is(
+				err,
+				nethttp.ErrServerClosed,
+			) {
 				log.Printf(
 					"HTTP server error: %v",
 					err,
@@ -147,7 +208,9 @@ func (a *App) Run(ctx context.Context) error {
 		}
 	}()
 
-	log.Println("Kiosk Home Display application is running")
+	log.Println(
+		"Kiosk Home Display application is running",
+	)
 
 	<-ctx.Done()
 
@@ -157,27 +220,47 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func (a *App) registerHandlers() {
-	a.bus.Subscribe(events.EventIdleTimeout, func(event events.Event) {
-		if err := a.display.Sleep(); err != nil {
-			log.Printf("failed to put display to sleep: %v", err)
-		}
-	})
+	a.bus.Subscribe(
+		events.EventIdleTimeout,
+		func(event events.Event) {
+			if err := a.display.Sleep(); err != nil {
+				log.Printf(
+					"failed to put display to sleep: %v",
+					err,
+				)
+			}
+		},
+	)
 
-	a.bus.Subscribe(events.EventScheduleOn, func(event events.Event) {
-		if err := a.display.Wake(); err != nil {
-			log.Printf("failed to wake display: %v", err)
-		}
-	})
+	a.bus.Subscribe(
+		events.EventScheduleOn,
+		func(event events.Event) {
+			if err := a.display.Wake(); err != nil {
+				log.Printf(
+					"failed to wake display: %v",
+					err,
+				)
+			}
+		},
+	)
 
-	a.bus.Subscribe(events.EventScheduleOff, func(event events.Event) {
-		if err := a.display.Sleep(); err != nil {
-			log.Printf("failed to put display to sleep: %v", err)
-		}
-	})
+	a.bus.Subscribe(
+		events.EventScheduleOff,
+		func(event events.Event) {
+			if err := a.display.Sleep(); err != nil {
+				log.Printf(
+					"failed to put display to sleep: %v",
+					err,
+				)
+			}
+		},
+	)
 }
 
 func (a *App) Stop() error {
-	log.Println("Stopping Kiosk Home Display backend...")
+	log.Println(
+		"Stopping Kiosk Home Display backend...",
+	)
 
 	shutdownCtx, cancel := context.WithTimeout(
 		context.Background(),
@@ -185,7 +268,9 @@ func (a *App) Stop() error {
 	)
 	defer cancel()
 
-	if err := a.httpServer.Stop(shutdownCtx); err != nil {
+	if err := a.httpServer.Stop(
+		shutdownCtx,
+	); err != nil {
 		log.Printf(
 			"failed to stop HTTP server: %v",
 			err,
@@ -200,7 +285,16 @@ func (a *App) Stop() error {
 		a.idle.Stop()
 	}
 
-	log.Println("Kiosk Home Display backend stopped")
+	if err := a.db.Close(); err != nil {
+		log.Printf(
+			"failed to close database: %v",
+			err,
+		)
+	}
+
+	log.Println(
+		"Kiosk Home Display backend stopped",
+	)
 
 	return nil
 }

@@ -5,20 +5,24 @@ import (
 	"log"
 
 	"github.com/thiagoleet/kiosk-home-display/internal/events"
+	"github.com/thiagoleet/kiosk-home-display/internal/i18n"
 )
 
 type Manager struct {
 	bus        *events.Bus
 	repository Repository
+	texts      i18n.Catalog
 }
 
 func NewManager(
 	bus *events.Bus,
 	repository Repository,
+	texts i18n.Catalog,
 ) *Manager {
 	return &Manager{
 		bus:        bus,
 		repository: repository,
+		texts:      texts,
 	}
 }
 
@@ -45,7 +49,7 @@ func (m *Manager) handlePrinterStarted(
 	activity := events.NewActivity(
 		events.NotificationContextPrinter,
 		events.EventPrinterStarted,
-		"Impressão iniciada",
+		m.texts.Text(i18n.KeyPrinterStarted),
 		data.Name,
 	)
 
@@ -63,7 +67,7 @@ func (m *Manager) handlePrinterCompleted(
 	activity := events.NewActivity(
 		events.NotificationContextPrinter,
 		events.EventPrinterCompleted,
-		"Impressão concluída",
+		m.texts.Text(i18n.KeyPrinterCompleted),
 		data.Name,
 	)
 

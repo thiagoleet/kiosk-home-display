@@ -6,7 +6,9 @@
 @import "./kiosk/kiosk-header.css";
 @import "./kiosk/kiosk-screen.css";
 @import "./kiosk/kiosk-time.css";
+@import "./kiosk/kiosk-weather.css";
 @import "./kiosk/kiosk-transition.css";
+
 
 @import "./home/home-layout.css";
 

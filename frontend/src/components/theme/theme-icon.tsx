@@ -1,8 +1,8 @@
 import { createElement, type ComponentProps } from "react";
 
-import { defaultIcons } from "../../themes/icons/default-icons";
-import type { ThemeIconName } from "../../types/theme";
-import { useTheme } from "../../hooks/use-theme";
+import { defaultIcons } from "@/themes/icons/default-icons";
+import type { ThemeIconName } from "@/types/theme";
+import { useTheme } from "@/hooks/use-theme";
 
 type ThemeIconProps = {
   name: ThemeIconName;

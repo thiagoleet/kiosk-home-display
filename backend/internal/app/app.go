@@ -161,6 +161,7 @@ func New(cfg config.Config) (*App, error) {
 		printerManager,
 		activityRepository,
 		texts,
+		cfg.HTTP.AllowedOrigins,
 	)
 
 	return &App{

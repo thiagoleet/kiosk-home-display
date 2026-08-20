@@ -27,6 +27,7 @@ func NewServer(
 	printerManager *printer.Manager,
 	activityRepository activity.Repository,
 	texts i18n.Catalog,
+	allowedOrigins []string,
 ) *Server {
 	mux := nethttp.NewServeMux()
 
@@ -87,7 +88,7 @@ func NewServer(
 	return &Server{
 		server: &nethttp.Server{
 			Addr:    fmt.Sprintf("%s:%d", host, port),
-			Handler: mux,
+			Handler: corsMiddleware(allowedOrigins, mux),
 		},
 	}
 }

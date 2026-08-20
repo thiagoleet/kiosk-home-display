@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strings"
 )
 
 func corsMiddleware(
@@ -62,11 +63,21 @@ func isAllowedOrigin(
 	origin string,
 	allowedOrigins []string,
 ) bool {
+	host := stripScheme(origin)
+
 	for _, allowedOrigin := range allowedOrigins {
-		if origin == allowedOrigin {
+		if host == stripScheme(allowedOrigin) {
 			return true
 		}
 	}
 
 	return false
+}
+
+func stripScheme(origin string) string {
+	if _, rest, found := strings.Cut(origin, "://"); found {
+		return rest
+	}
+
+	return origin
 }

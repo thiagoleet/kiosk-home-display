@@ -80,7 +80,7 @@ func (m *Manager) Print(
 func (m *Manager) simulatePrint(
 	job PrintJob,
 ) {
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	m.mu.Lock()
 

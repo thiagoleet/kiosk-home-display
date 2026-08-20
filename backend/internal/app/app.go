@@ -257,6 +257,18 @@ func (a *App) registerHandlers() {
 			}
 		},
 	)
+
+	a.bus.Subscribe(
+		events.EventNotification,
+		func(event events.Event) {
+			if err := a.display.Wake(); err != nil {
+				log.Printf(
+					"failed to wake display for notification: %v",
+					err,
+				)
+			}
+		},
+	)
 }
 
 func (a *App) Stop() error {

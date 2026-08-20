@@ -2,44 +2,49 @@ export type KioskThemeId = "modern" | "retro-16bit";
 
 export type KioskTheme = {
   id: KioskThemeId;
+  colors: KioskThemeColors;
+  typography: KioskThemeTypography;
+  spacing: KioskThemeSpacing;
+  border: KioskThemeBorder;
+  sounds: KioskThemeSounds;
+};
 
-  colors: {
-    background: string;
-    surface: string;
-    surfaceElevated: string;
+export type KioskThemeColors = {
+  background: string;
+  surface: string;
+  surfaceElevated: string;
 
-    foreground: string;
-    secondary: string;
-    muted: string;
+  foreground: string;
+  secondary: string;
+  muted: string;
 
-    primary: string;
-    border: string;
+  primary: string;
+  border: string;
 
-    success: string;
-    warning: string;
-    error: string;
-  };
+  success: string;
+  warning: string;
+  error: string;
+};
 
-  typography: {
-    fontFamily: string;
-    headingWeight: number;
-    bodyWeight: number;
-  };
+export type KioskThemeTypography = {
+  fontFamily: string;
+  headingWeight: number;
+  bodyWeight: number;
+};
 
-  spacing: {
-    xs: string;
-    sm: string;
-    md: string;
-    lg: string;
-    xl: string;
-  };
+export type KioskThemeSpacing = {
+  xs: string;
+  sm: string;
+  md: string;
+  lg: string;
+  xl: string;
+};
 
-  border: {
-    width: string;
-    radius: string;
-  };
+export type KioskThemeBorder = {
+  width: string;
+  radius: string;
+};
 
-  sounds: {
-    notification: string;
-  };
+export type KioskThemeSounds = {
+  notification: string;
 };

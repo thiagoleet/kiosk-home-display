@@ -14,7 +14,7 @@ import {
   WifiOff,
 } from "lucide-react";
 
-import type { KioskThemeIcons } from "../../types/theme";
+import type { KioskThemeIcons } from "@/types/theme";
 
 export const defaultIcons: KioskThemeIcons = {
   notification: Bell,

@@ -1,6 +1,6 @@
 import { Notification } from "./notification";
 
-import type { Notification as NotificationData } from "../../types/notification";
+import type { Notification as NotificationData } from "@/types/notification";
 
 type NotificationListProps = {
   notification: NotificationData | null;

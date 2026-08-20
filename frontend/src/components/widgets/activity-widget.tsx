@@ -1,6 +1,6 @@
 import { Info, Monitor, Printer, Wifi, type LucideIcon } from "lucide-react";
 
-import type { NotificationContext } from "../../types/notification";
+import type { NotificationContext } from "@/types/notification";
 
 import { useTranslation } from "@/hooks/use-translation";
 import { useActivities } from "@/hooks/use-activities";

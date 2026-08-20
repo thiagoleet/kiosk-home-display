@@ -1,4 +1,4 @@
-import type { Notification } from "../../types/notification";
+import type { Notification } from "@/types/notification";
 import { KioskClock } from "../kiosk/kiosk-clock";
 import { KioskGreeting } from "../kiosk/kiosk-greeting";
 import { NotificationList } from "../notifications/notification-list";

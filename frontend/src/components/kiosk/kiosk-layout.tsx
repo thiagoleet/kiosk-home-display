@@ -5,8 +5,8 @@ import { HomeLayout } from "../layouts/home-layout";
 import { NotificationLayout } from "../layouts/notification-layout";
 import { ScreenSaver } from "../screensaver/screensaver";
 
-import type { Notification } from "../../types/notification";
-import type { ScreenMode } from "../../types/screen";
+import type { Notification } from "@/types/notification";
+import type { ScreenMode } from "@/types/screen";
 import { Activity } from "react";
 
 type KioskLayoutProps = {

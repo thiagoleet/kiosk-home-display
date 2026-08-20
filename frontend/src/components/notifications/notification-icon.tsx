@@ -3,7 +3,7 @@ import { Info, Monitor, Printer, Wifi, type LucideIcon } from "lucide-react";
 import type {
   NotificationContext,
   NotificationLevel,
-} from "../../types/notification";
+} from "@/types/notification";
 
 type NotificationIconProps = {
   context: NotificationContext;

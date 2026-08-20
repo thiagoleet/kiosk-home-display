@@ -1,6 +1,6 @@
 import { NotificationIcon } from "./notification-icon";
 
-import type { Notification as NotificationData } from "../../types/notification";
+import type { Notification as NotificationData } from "@/types/notification";
 
 type NotificationProps = {
   notification: NotificationData;

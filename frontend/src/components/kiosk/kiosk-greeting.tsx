@@ -1,5 +1,5 @@
-import { useTranslation } from "../../hooks/use-translation";
-import { useGreetingKey } from "../../hooks/use-greeting";
+import { useTranslation } from "@/hooks/use-translation";
+import { useGreetingKey } from "@/hooks/use-greeting";
 
 export function KioskGreeting() {
   const { t } = useTranslation();

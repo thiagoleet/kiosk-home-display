@@ -1,9 +1,9 @@
 import { Bell, Circle } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { useKiosk } from "../../hooks/use-kiosk";
-import { useTranslation } from "../../hooks/use-translation";
-import { useWebSocketContext } from "../../hooks/use-websocket-context";
+import { useKiosk } from "@/hooks/use-kiosk";
+import { useTranslation } from "@/hooks/use-translation";
+import { useWebSocketContext } from "@/hooks/use-websocket-context";
 
 type KioskHeaderProps = {
   hasNotification: boolean;

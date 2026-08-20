@@ -1,7 +1,7 @@
 import { CheckCircle, LoaderCircle, Printer } from "lucide-react";
 
-import { usePrinter } from "../../hooks/use-printer";
-import { useTranslation } from "../../hooks/use-translation";
+import { usePrinter } from "@/hooks/use-printer";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function PrinterWidget() {
   const { state, currentJob } = usePrinter();

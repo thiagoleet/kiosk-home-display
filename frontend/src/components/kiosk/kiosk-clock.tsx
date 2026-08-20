@@ -1,5 +1,5 @@
-import { useTranslation } from "../../hooks/use-translation";
-import { useClock } from "../../hooks/use-clock";
+import { useTranslation } from "@/hooks/use-translation";
+import { useClock } from "@/hooks/use-clock";
 
 export function KioskClock() {
   const { locale } = useTranslation();

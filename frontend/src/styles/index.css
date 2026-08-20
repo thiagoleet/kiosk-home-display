@@ -9,8 +9,9 @@
 @import "./kiosk/kiosk-weather.css";
 @import "./kiosk/kiosk-transition.css";
 
-
 @import "./home/home-layout.css";
+
+@import "./screensaver/screensaver-layout.css";
 
 @import "./notifications/notification.css";
 @import "./notifications/notification-list.css";

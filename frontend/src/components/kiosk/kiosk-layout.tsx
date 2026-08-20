@@ -7,6 +7,7 @@ import { ScreenSaver } from "../screensaver/screensaver";
 
 import type { Notification } from "../../types/notification";
 import type { ScreenMode } from "../../types/screen";
+import { Activity } from "react";
 
 type KioskLayoutProps = {
   mode: ScreenMode;
@@ -16,7 +17,9 @@ type KioskLayoutProps = {
 export function KioskLayout({ mode, notification }: KioskLayoutProps) {
   return (
     <section className="kiosk-layout">
-      <KioskHeader hasNotification={notification !== null} />
+      <Activity mode={mode === "screensaver" ? "hidden" : "visible"}>
+        <KioskHeader hasNotification={notification !== null} />
+      </Activity>
 
       <div className="kiosk-layout__content">
         <KioskTransition

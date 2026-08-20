@@ -1,1 +1,1 @@
-export type ScreenMode = "home" | "notification";
+export type ScreenMode = "home" | "notification" | "screensaver";

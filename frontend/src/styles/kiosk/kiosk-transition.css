@@ -22,7 +22,7 @@
     cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.kiosk-transition[data-mode="screen"][data-phase="exiting"] {
+.kiosk-transition[data-mode="screensaver"][data-phase="exiting"] {
   animation:
     screen-fade-exit
     200ms
@@ -30,7 +30,7 @@
     forwards;
 }
 
-.kiosk-transition[data-mode="screen"][data-phase="entering"] {
+.kiosk-transition[data-mode="screensaver"][data-phase="entering"] {
   animation:
     screen-fade-enter
     350ms

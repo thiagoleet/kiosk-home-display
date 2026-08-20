@@ -6,12 +6,15 @@ import { KioskScreen } from "./components/kiosk/kiosk-screen";
 
 import { useNotifications } from "./hooks/use-notifications";
 import { useScreenMode } from "./hooks/use-screen-mode";
+import { useKioskState } from "./hooks/use-kiosk-state";
 
 function App() {
   const { activeNotification } = useNotifications();
+  const { state } = useKioskState();
 
   const { mode } = useScreenMode({
     notification: activeNotification,
+    isScreenOn: state.display.power === "on",
   });
 
   return (

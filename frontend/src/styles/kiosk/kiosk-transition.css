@@ -21,3 +21,18 @@
     220ms
     cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+.kiosk-transition[data-mode="screensaver"][data-phase="exiting"] {
+  animation:
+    screen-fade-exit
+    200ms
+    ease-in
+    forwards;
+}
+
+.kiosk-transition[data-mode="screensaver"][data-phase="entering"] {
+  animation:
+    screen-fade-enter
+    350ms
+    cubic-bezier(0.16, 1, 0.3, 1);
+}

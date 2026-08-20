@@ -1,21 +1,9 @@
 import { useTranslation } from "../../hooks/use-translation";
-
-function getGreetingKey() {
-  const hour = new Date().getHours();
-
-  if (hour < 12) {
-    return "greeting.morning";
-  }
-
-  if (hour < 18) {
-    return "greeting.afternoon";
-  }
-
-  return "greeting.evening";
-}
+import { useGreetingKey } from "../../hooks/use-greeting";
 
 export function KioskGreeting() {
   const { t } = useTranslation();
+  const greetingKey = useGreetingKey();
 
-  return <p className="kiosk-greeting">{t(getGreetingKey())}</p>;
+  return <p className="kiosk-greeting">{t(greetingKey)}</p>;
 }

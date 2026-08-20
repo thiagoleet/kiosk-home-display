@@ -16,10 +16,10 @@ export function HomeLayout() {
         </div>
       </div>
 
-      <div className="home-layout__footer">
+      <footer className="home-layout__footer">
         <PrinterWidget />
         <ActivityWidget />
-      </div>
+      </footer>
     </section>
   );
 }

@@ -5,18 +5,25 @@ import { useKiosk } from "@/hooks/use-kiosk";
 import { useTranslation } from "@/hooks/use-translation";
 import { useWebSocketContext } from "@/hooks/use-websocket-context";
 
+const ONLINE_STATUS_DURATION = 3000;
+
 type KioskHeaderProps = {
   hasNotification: boolean;
 };
 
-const ONLINE_STATUS_DURATION = 3000;
+type ConnectionStatusIndicatorProps = {
+  isConnected: boolean;
+};
 
-export function KioskHeader({ hasNotification }: KioskHeaderProps) {
-  const { status } = useWebSocketContext();
+type NotificationIndicatorProps = {
+  hasNotification: boolean;
+};
 
-  const isConnected = status === "connected";
-  const { profile } = useKiosk();
+const ConnectionStatusIndicator = ({
+  isConnected,
+}: ConnectionStatusIndicatorProps) => {
   const { t } = useTranslation();
+
   const [isConnectionStatusVisible, setConnectionStatusVisible] =
     useState(true);
   const shouldShowConnectionStatus = !isConnected || isConnectionStatusVisible;
@@ -41,47 +48,69 @@ export function KioskHeader({ hasNotification }: KioskHeaderProps) {
   }, [isConnected]);
 
   return (
+    <div
+      className={[
+        "connection-status",
+        isConnected
+          ? "connection-status--connected"
+          : "connection-status--disconnected",
+        !shouldShowConnectionStatus && "connection-status--hidden",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      aria-hidden={!shouldShowConnectionStatus}
+    >
+      <Circle
+        size={8}
+        fill="currentColor"
+        aria-hidden="true"
+      />
+
+      <span>{t(isConnected ? "status.online" : "status.offline")}</span>
+    </div>
+  );
+};
+
+const NotificationIndicator = ({
+  hasNotification,
+}: NotificationIndicatorProps) => {
+  const { t } = useTranslation();
+
+  if (!hasNotification) {
+    return null;
+  }
+
+  return (
+    <span
+      className="notification-indicator"
+      aria-label={t("notification.active")}
+    >
+      <Bell
+        size={18}
+        aria-hidden="true"
+      />
+
+      <span
+        className="notification-indicator__dot"
+        aria-hidden="true"
+      />
+    </span>
+  );
+};
+
+export function KioskHeader({ hasNotification }: KioskHeaderProps) {
+  const { status } = useWebSocketContext();
+
+  const isConnected = status === "connected";
+  const { profile } = useKiosk();
+
+  return (
     <header className="kiosk-header">
       <h1 className="kiosk-name">{profile.name}</h1>
 
       <div className="kiosk-header__status">
-        {hasNotification && (
-          <span
-            className="notification-indicator"
-            aria-label={t("notification.active")}
-          >
-            <Bell
-              size={18}
-              aria-hidden="true"
-            />
-
-            <span
-              className="notification-indicator__dot"
-              aria-hidden="true"
-            />
-          </span>
-        )}
-
-        <div
-          className={[
-            "connection-status",
-            isConnected
-              ? "connection-status--connected"
-              : "connection-status--disconnected",
-            !shouldShowConnectionStatus && "connection-status--hidden",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          aria-hidden={!shouldShowConnectionStatus}
-        >
-          <Circle
-            size={8}
-            fill="currentColor"
-            aria-hidden="true"
-          />
-
-          <span>{t(isConnected ? "status.online" : "status.offline")}</span>
-        </div>
+        <NotificationIndicator hasNotification={hasNotification} />
+        <ConnectionStatusIndicator isConnected={isConnected} />
       </div>
     </header>
   );

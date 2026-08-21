@@ -11,6 +11,8 @@
 
 @import "./home/home-layout.css";
 
+@import "./carousel/carousel.css";
+
 @import "./screensaver/screensaver-layout.css";
 
 @import "./notifications/notification.css";

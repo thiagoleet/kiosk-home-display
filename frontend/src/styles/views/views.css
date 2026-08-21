@@ -16,4 +16,11 @@
   font-size: clamp(4.5rem, 22vw, 7rem);
   line-height: 4.5;
 }
+
+.weather-view .kiosk-weather svg {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  vertical-align: -0.1em;
+}
  

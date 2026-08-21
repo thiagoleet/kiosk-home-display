@@ -11,3 +11,9 @@
     350ms
     cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+.weather-view .kiosk-weather{
+  font-size: clamp(4.5rem, 22vw, 7rem);
+  line-height: 4.5;
+}
+ 

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import { Carousel } from "@/components/carousel/carousel";
 import { HomeView } from "@/components/views/home-view";
+import { WeatherView } from "@/components/views/weather-view";
 
 import { ActivityWidget } from "@/components/widgets/activity-widget";
 import { PrinterWidget } from "@/components/widgets/printer-widget";
@@ -16,7 +17,10 @@ export function HomeLayout() {
    * Extra slides are appended after it.
    */
   const slides = useMemo<CarouselSlide[]>(
-    () => [{ id: "home", content: <HomeView /> }],
+    () => [
+      { id: "home", content: <HomeView /> },
+      { id: "weather", content: <WeatherView /> },
+    ],
     [],
   );
 

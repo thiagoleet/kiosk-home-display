@@ -1,7 +1,7 @@
 import { useTranslation } from "@/hooks/use-translation";
 import { useClock } from "@/hooks/use-clock";
 
-export function KioskViewWidget() {
+export function ClockViewWidget() {
   const { locale } = useTranslation();
   const time = useClock(locale);
 

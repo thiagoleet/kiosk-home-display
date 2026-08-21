@@ -1,5 +1,5 @@
 import type { Notification } from "@/types/notification";
-import { KioskViewWidget } from "../view-widgets/clock-view-widget";
+import { ClockViewWidget } from "../view-widgets/clock-view-widget";
 import { GreetingViewWidget } from "../view-widgets/greeting-view-widget";
 import { NotificationList } from "../notifications/notification-list";
 
@@ -14,7 +14,7 @@ export function NotificationLayout({ notification }: NotificationLayoutProps) {
         <div className="notification-layout__info">
           <GreetingViewWidget />
 
-          <KioskViewWidget />
+          <ClockViewWidget />
         </div>
 
         <div className="notification-layout__panel">

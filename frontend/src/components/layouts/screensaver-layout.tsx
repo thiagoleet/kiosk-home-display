@@ -1,14 +1,14 @@
-import { KioskClock } from "../kiosk/kiosk-clock";
-import { KioskGreeting } from "../kiosk/kiosk-greeting";
-import { KioskWeather } from "../kiosk/kiosk-weather";
+import { KioskViewWidget } from "../view-widgets/clock-view-widget";
+import { GreetingViewWidget } from "../view-widgets/greeting-view-widget";
+import { KioskWeather } from "../view-widgets/weather-view-widget";
 
 export function ScreenSaverLayout() {
   return (
     <section className="screensaver-layout">
       <div className="screensaver-layout__main">
         <div className="screensaver-layout__greeting">
-          <KioskGreeting />
-          <KioskClock />
+          <GreetingViewWidget />
+          <KioskViewWidget />
           <KioskWeather />
         </div>
       </div>

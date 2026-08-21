@@ -1,7 +1,7 @@
 import { useTranslation } from "@/hooks/use-translation";
 import { useGreetingKey } from "@/hooks/use-greeting";
 
-export function KioskGreeting() {
+export function GreetingViewWidget() {
   const { t } = useTranslation();
   const greetingKey = useGreetingKey();
 

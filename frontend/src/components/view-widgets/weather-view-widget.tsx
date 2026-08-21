@@ -1,7 +1,7 @@
 import { useWeatherWidget } from "@/hooks/use-weather-widget";
 import { ThemeIcon } from "../theme/theme-icon";
 
-export function KioskWeather() {
+export function WeatherViewWidget() {
   const { icon, temperature } = useWeatherWidget();
 
   return (

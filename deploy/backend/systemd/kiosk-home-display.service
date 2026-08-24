@@ -1,0 +1,26 @@
+[Unit]
+Description=Kiosk Home Display backend
+Documentation=https://github.com/thiagoleet/kiosk-home-display
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__SERVICE_USER__
+WorkingDirectory=/var/lib/kiosk-home-display
+EnvironmentFile=/etc/kiosk-home-display/kiosk.env
+ExecStart=/usr/local/bin/kiosk-home-display
+Restart=always
+RestartSec=2
+
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ReadWritePaths=/var/lib/kiosk-home-display
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

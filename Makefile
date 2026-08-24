@@ -1,4 +1,4 @@
-.PHONY: test test-verbose coverage race build run
+.PHONY: test test-verbose coverage race build build-pi run
 
 test:
 	cd backend && gotestsum ./...
@@ -15,6 +15,9 @@ race:
 
 build:
 	cd backend && go build -o kiosk ./cmd/kiosk
+
+build-pi:
+	cd backend && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o kiosk ./cmd/kiosk
 
 run:
 	cd backend && go run ./cmd/kiosk

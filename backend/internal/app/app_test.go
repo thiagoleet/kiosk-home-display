@@ -34,3 +34,15 @@ func TestAppStopsWhenContextIsCancelled(t *testing.T) {
 		t.Fatal("application did not stop after context cancellation")
 	}
 }
+
+func TestAppStartsWithLinuxDisplayMode(t *testing.T) {
+	cfg := config.Default()
+	cfg.Display.Mode = "linux"
+
+	application, err := New(cfg)
+	if err != nil {
+		t.Fatalf("failed to create application: %v", err)
+	}
+
+	defer application.db.Close()
+}

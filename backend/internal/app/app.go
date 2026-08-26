@@ -90,10 +90,21 @@ func New(cfg config.Config) (*App, error) {
 	if err := displayManager.SetBrightness(
 		cfg.Display.Brightness,
 	); err != nil {
-		db.Close()
+		if !errors.Is(
+			err,
+			display.ErrBrightnessUnsupported,
+		) {
+			db.Close()
 
-		return nil, fmt.Errorf(
-			"set initial display brightness: %w",
+			return nil, fmt.Errorf(
+				"set initial display brightness: %w",
+				err,
+			)
+		}
+
+		log.Printf(
+			"[APP] display mode %q ignores brightness: %v",
+			cfg.Display.Mode,
 			err,
 		)
 	}

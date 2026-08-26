@@ -60,8 +60,12 @@ kiosk page that Nginx serves on port `80`.
 `DISPLAY_MODE=linux` drives the real display through `xset`. It only works when
 the service user owns the X session, and it needs `DISPLAY` and `XAUTHORITY`
 set in the env file. Install the backend as the same auto-login user that the
-frontend deployment uses. Keep `DISPLAY_MODE=virtual` to run without touching
-the display hardware.
+frontend deployment uses. `DISPLAY_BRIGHTNESS` is applied with `xrandr`, as a
+software gamma adjustment on every connected output, so it works on HDMI
+screens that expose no backlight device. Both tools come from the
+`x11-xserver-utils` package. When `xrandr` is missing or no output is
+connected, the service logs that brightness is unsupported and starts anyway.
+Keep `DISPLAY_MODE=virtual` to run without touching the display hardware.
 
 The SQLite database lives at `/var/lib/kiosk-home-display/data/kiosk.db`,
 because the backend resolves it relative to the working directory.

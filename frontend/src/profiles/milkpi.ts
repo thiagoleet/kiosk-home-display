@@ -8,6 +8,6 @@ export const milkpiProfile: KioskProfile = {
     printer: true,
   },
 
-  theme: "modern",
+  theme: "retro-16bit",
   locale: "pt-BR",
 };

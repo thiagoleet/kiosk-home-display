@@ -1,6 +1,6 @@
 import type { Weather } from "../types/weather";
 
-const WEATHER_API_URL = "http://localhost:8080/api/weather";
+const WEATHER_API_URL = "/api/weather";
 
 export async function getWeather(): Promise<Weather> {
   const response = await fetch(WEATHER_API_URL);

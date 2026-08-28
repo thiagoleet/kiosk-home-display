@@ -82,6 +82,11 @@ func NewServer(
 	)
 
 	mux.HandleFunc(
+		"/api/notifications",
+		notificationHandler.Notify,
+	)
+
+	mux.HandleFunc(
 		"/api/printer/print",
 		printerHandler.Print,
 	)

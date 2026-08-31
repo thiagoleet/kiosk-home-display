@@ -8,6 +8,21 @@ importers:
 
   .:
     dependencies:
+      '@pxlkit/core':
+        specifier: ^1.3.4
+        version: 1.3.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@pxlkit/feedback':
+        specifier: ^1.2.5
+        version: 1.2.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@pxlkit/gamification':
+        specifier: ^1.2.4
+        version: 1.2.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@pxlkit/ui':
+        specifier: ^1.2.5
+        version: 1.2.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@pxlkit/weather':
+        specifier: ^1.2.4
+        version: 1.2.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@tanstack/react-query':
         specifier: ^5.101.4
         version: 5.101.4(react@19.2.8)
@@ -204,6 +219,24 @@ packages:
 
   '@oxc-project/types@0.144.0':
     resolution: {integrity: sha512-nuhZIOLuI6TFQ32I/WnUx+SCPY7SdSKwgnFHydAuoS1+Z4BRcaP+RRJmGzl9lw+0OFF7UmaESf7KQRXaNLHypg==}
+
+  '@pxlkit/core@1.3.4':
+    resolution: {integrity: sha512-GwI5yYnyc4Pqa10ZvVoQQ/yi+MutjWJC+CqIMKrINlVK7KQUIq4VMmVTS3E67WvI4orAhZ+JfiX+EqOzzCr1Tg==}
+    peerDependencies:
+      react: '>=18.0.0'
+      react-dom: '>=18.0.0'
+
+  '@pxlkit/feedback@1.2.5':
+    resolution: {integrity: sha512-4kMYGfsl5y7mSVNz0pQ3vJA0iELDyexqYIvMKp9/GlfUyC+ADFOCJ87i5jwP1+k+xxGyY4wmbq2DDLr0LwLQ+g==}
+
+  '@pxlkit/gamification@1.2.4':
+    resolution: {integrity: sha512-aQlxO7Di4K0XJkb3vwZGvXV9So8kOsCePh/5E601F8q4VSVQXcgKOcEkH4w1rseWWAjYxIGuCkQFv3v0sIDhzQ==}
+
+  '@pxlkit/ui@1.2.5':
+    resolution: {integrity: sha512-axP+Um4zukKFAMJwuH/CK6sLlU1RMkNbZU0e18GmSaD6hgu7nOQ1vbYUTU32sifBeEVyzSvlkkZFZJjVqFk2wg==}
+
+  '@pxlkit/weather@1.2.4':
+    resolution: {integrity: sha512-WslUNObyT72nbg7mQANzmUHwiMJ5C4oCJ7d/nY0ttoDqz2JcMXDXYJV0mC7L6ahtG/noM4bQEEcEmjYHnphsIg==}
 
   '@rolldown/binding-android-arm64@1.2.4':
     resolution: {integrity: sha512-jHC2cnyKz5xU2fhECtFl8OZ83cYNt13GZQD+0uMJ/X3o+ijmd56okHhTUwxVSHPx1IRVIJEZ1/1pPzeLCU6XKA==}
@@ -1090,6 +1123,39 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.5.5
 
   '@oxc-project/types@0.144.0': {}
+
+  '@pxlkit/core@1.3.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+
+  '@pxlkit/feedback@1.2.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@pxlkit/core': 1.3.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+    transitivePeerDependencies:
+      - react
+      - react-dom
+
+  '@pxlkit/gamification@1.2.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@pxlkit/core': 1.3.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+    transitivePeerDependencies:
+      - react
+      - react-dom
+
+  '@pxlkit/ui@1.2.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@pxlkit/core': 1.3.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+    transitivePeerDependencies:
+      - react
+      - react-dom
+
+  '@pxlkit/weather@1.2.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@pxlkit/core': 1.3.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+    transitivePeerDependencies:
+      - react
+      - react-dom
 
   '@rolldown/binding-android-arm64@1.2.4':
     optional: true

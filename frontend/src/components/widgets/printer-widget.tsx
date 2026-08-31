@@ -1,7 +1,6 @@
-import { CheckCircle, LoaderCircle, Printer } from "lucide-react";
-
 import { usePrinter } from "@/hooks/use-printer";
 import { useTranslation } from "@/hooks/use-translation";
+import { ThemeIcon } from "../theme/theme-icon";
 
 export function PrinterWidget() {
   const { state, currentJob } = usePrinter();
@@ -14,15 +13,15 @@ export function PrinterWidget() {
       data-state={state}
     >
       <div className="widget-title">
-        <Printer size={18} />
+        <ThemeIcon name="printer" />
         <span>{t("printer.title")}</span>
       </div>
 
       <div className="printer-widget__state">
         {isPrinting ? (
           <>
-            <LoaderCircle
-              size={18}
+            <ThemeIcon
+              name="loading"
               className="spin"
             />
 
@@ -30,7 +29,7 @@ export function PrinterWidget() {
           </>
         ) : (
           <>
-            <CheckCircle size={18} />
+            <ThemeIcon name="notification.success" />
 
             <span>{t("printer.ready")}</span>
           </>

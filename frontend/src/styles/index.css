@@ -1,6 +1,7 @@
 @import "./theme.css";
 @import "./base.css";
 @import "./animations.css";
+@import "./fonts.css";
 
 @import "./kiosk/kiosk-layout.css";
 @import "./kiosk/kiosk-header.css";

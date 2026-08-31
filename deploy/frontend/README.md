@@ -8,9 +8,9 @@ mode when a user logs in to the Raspberry Pi desktop session.
 - Raspberry Pi OS with Desktop and an automatic-login user.
 - `nginx` and `chromium` installed. On some Raspberry Pi OS releases the
   Chromium command is named `chromium-browser`; the launcher supports both.
-- The backend running locally on port `8080`.
+- The daemon running locally on port `8080`.
 
-Configure the backend with `HTTP_ALLOWED_ORIGINS=localhost` so its WebSocket
+Configure the daemon with `HTTP_ALLOWED_ORIGINS=localhost` so its WebSocket
 endpoint accepts requests from the kiosk page served by Nginx.
 
 Install the operating-system dependencies once:

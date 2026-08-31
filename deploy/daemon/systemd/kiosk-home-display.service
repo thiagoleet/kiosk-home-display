@@ -1,5 +1,5 @@
 [Unit]
-Description=Kiosk Home Display backend
+Description=Kiosk Home Display daemon
 Documentation=https://github.com/thiagoleet/kiosk-home-display
 After=network-online.target
 Wants=network-online.target

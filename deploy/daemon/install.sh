@@ -17,26 +17,26 @@ if ! id "$service_user" >/dev/null 2>&1; then
 fi
 
 if ! command -v systemctl >/dev/null 2>&1; then
-  echo "Systemd is required to run the backend as a service." >&2
+  echo "Systemd is required to run the daemon as a service." >&2
   exit 1
 fi
 
 if [ -z "$binary" ]; then
   if ! command -v go >/dev/null 2>&1; then
-    echo "Go is required to build the backend. Install it with: sudo apt install golang" >&2
+    echo "Go is required to build the daemon. Install it with: sudo apt install golang" >&2
     echo "Or cross-compile elsewhere and pass the binary: $0 /path/to/kiosk" >&2
     exit 1
   fi
 
-  echo "Building the backend..."
+  echo "Building the daemon..."
   build_dir=$(mktemp -d)
   trap 'rm -rf "$build_dir"' EXIT INT TERM
   binary="$build_dir/kiosk"
-  (cd "$repo_root/backend" && CGO_ENABLED=0 go build -o "$binary" ./cmd/kiosk)
+  (cd "$repo_root/daemon" && CGO_ENABLED=0 go build -o "$binary" ./cmd/kiosk)
 fi
 
 if [ ! -f "$binary" ]; then
-  echo "Backend binary not found at $binary." >&2
+  echo "Daemon binary not found at $binary." >&2
   exit 1
 fi
 
@@ -66,5 +66,5 @@ sudo systemctl daemon-reload
 sudo systemctl enable "$service_name"
 sudo systemctl restart "$service_name"
 
-echo "Backend installed and running as $service_user."
+echo "Daemon installed and running as $service_user."
 echo "Check it with: systemctl status $service_name"

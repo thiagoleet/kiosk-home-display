@@ -301,7 +301,7 @@ func (a *App) registerHandlers() {
 
 func (a *App) Stop() error {
 	log.Println(
-		"Stopping Kiosk Home Display backend...",
+		"Stopping Kiosk Home Display daemon...",
 	)
 
 	shutdownCtx, cancel := context.WithTimeout(
@@ -335,7 +335,7 @@ func (a *App) Stop() error {
 	}
 
 	log.Println(
-		"Kiosk Home Display backend stopped",
+		"Kiosk Home Display daemon stopped",
 	)
 
 	return nil

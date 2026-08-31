@@ -1,23 +1,23 @@
 .PHONY: test test-verbose coverage race build build-pi run
 
 test:
-	cd backend && gotestsum ./...
+	cd daemon && gotestsum ./...
 
 test-verbose:
-	cd backend && go test -v ./...
+	cd daemon && go test -v ./...
 
 coverage:
-	cd backend && go test ./... -coverprofile=coverage.out
-	cd backend && go tool cover -html=coverage.out
+	cd daemon && go test ./... -coverprofile=coverage.out
+	cd daemon && go tool cover -html=coverage.out
 
 race:
-	cd backend && go test -race ./...
+	cd daemon && go test -race ./...
 
 build:
-	cd backend && go build -o kiosk ./cmd/kiosk
+	cd daemon && go build -o kiosk ./cmd/kiosk
 
 build-pi:
-	cd backend && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o kiosk ./cmd/kiosk
+	cd daemon && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o kiosk ./cmd/kiosk
 
 run:
-	cd backend && go run ./cmd/kiosk
+	cd daemon && go run ./cmd/kiosk

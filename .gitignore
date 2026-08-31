@@ -1,6 +1,6 @@
 .DS_Store
 
 # SQLite
-backend/data/*.db
-backend/data/*.db-shm
-backend/data/*.db-wal
+daemon/data/*.db
+daemon/data/*.db-shm
+daemon/data/*.db-wal

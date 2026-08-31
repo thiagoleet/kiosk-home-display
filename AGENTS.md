@@ -4,7 +4,7 @@
 
 The project has two applications:
 
-- backend: Go
+- daemon: Go
 - frontend: React + Vite + TypeScript
 
 ## Frontend

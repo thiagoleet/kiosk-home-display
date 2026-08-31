@@ -14,7 +14,7 @@
 
 **Kiosk Home Display** is a Linux-based home display system designed to run continuously on a dedicated screen, such as a Raspberry Pi connected to a TV or monitor.
 
-The system combines a **Go backend** with a **React frontend** to provide an event-driven display that can show an animated idle screen, notifications, system information, and real-time events.
+The system combines a **Go daemon** with a **React frontend** to provide an event-driven display that can show an animated idle screen, notifications, system information, and real-time events.
 
 ## Key Features
 
@@ -25,7 +25,7 @@ The system combines a **Go backend** with a **React frontend** to provide an eve
 - 🔔 Event-driven notifications
 - 🖨️ Printer/CUPS event monitoring
 - 📡 Extensible event sources such as MQTT
-- ⚡ Real-time communication between backend and frontend
+- ⚡ Real-time communication between daemon and frontend
 - 💡 Display power and sleep control
 - 🔄 Automatic startup and recovery through `systemd`
 - 🐧 Designed for Linux and Raspberry Pi environments
@@ -36,13 +36,13 @@ The project is organized as a monorepo containing two main applications:
 
 ```text
 |kiosk-home-display/
-├── backend/ # Go daemon and system integrations
+├── daemon/ # Go daemon and system integrations
 ├── frontend/ # React-based kiosk interface
 ├── deploy/ # Linux/systemd deployment configuration
 └── docs/ # Architecture and project documentation
 ```
 
-The Go backend acts as the system's event and display controller. It monitors external events, manages display state and scheduling, and communicates with the React frontend through WebSockets.
+The Go daemon acts as the system's event and display controller. It monitors external events, manages display state and scheduling, and communicates with the React frontend through WebSockets.
 
 ```text
              ┌─────────────────────┐
@@ -56,7 +56,7 @@ The Go backend acts as the system's event and display controller. It monitors ex
         └───────────────┼────────────────┘
                         ▼
                ┌────────────────┐
-               │   Go Backend   │
+               │   Go Daemon    │
                │                │
                │  Event Bus     │
                │  Display Mgmt  │

@@ -1,6 +1,6 @@
 {
   "notification.test.title": "Notificação de teste",
-  "notification.test.message": "Esta notificação veio do backend Go.",
+  "notification.test.message": "Esta notificação veio do daemon Go.",
   "printer.started": "Impressão iniciada",
   "printer.completed": "Impressão concluída"
 }

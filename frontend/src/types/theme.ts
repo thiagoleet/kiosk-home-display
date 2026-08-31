@@ -62,6 +62,7 @@ export type ThemeIconName =
   | "notification.success"
   | "notification.warning"
   | "notification.error"
+  | "loading"
   | "printer"
   | "wifi"
   | "wifi-off"
@@ -73,7 +74,10 @@ export type ThemeIconName =
   | "weather.rain"
   | "weather.rain_showers"
   | "weather.snow"
-  | "weather.thunderstorm";
+  | "weather.thunderstorm"
+  | "status"
+  | "status.offline"
+  | "status.online";
 
 export type ThemeIconProps = {
   size?: number | string;

@@ -1,6 +1,7 @@
 import {
   Bell,
   CheckCircle,
+  Circle,
   Cloud,
   CloudDrizzle,
   CloudFog,
@@ -8,6 +9,7 @@ import {
   CloudRain,
   CloudSnow,
   CloudSun,
+  LoaderCircle,
   Printer,
   Sun,
   Wifi,
@@ -18,6 +20,7 @@ import type { KioskThemeIcons } from "@/types/theme";
 
 export const defaultIcons: KioskThemeIcons = {
   notification: Bell,
+  loading: LoaderCircle,
 
   "notification.info": Bell,
   "notification.success": CheckCircle,
@@ -25,6 +28,9 @@ export const defaultIcons: KioskThemeIcons = {
   "notification.error": Bell,
 
   printer: Printer,
+  status: Circle,
+  "status.online": Circle,
+  "status.offline": Circle,
 
   wifi: Wifi,
   "wifi-off": WifiOff,

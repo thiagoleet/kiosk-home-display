@@ -1,5 +1,14 @@
+import { createElement } from "react";
+
 import notificationSound from "../../assets/sounds/notification.mp3";
 import type { KioskTheme } from "@/types/theme";
+
+import { Cloud, CloudSun, Rain, Sun, Thunder } from "@pxlkit/weather";
+import { Robot } from "@pxlkit/ui";
+
+import { AnimatedIcon, RetroIcon } from "../retro/pxlkit-icon";
+import { Bell, CheckCircle, Hourglass } from "@pxlkit/feedback";
+import { LevelUp, Skull } from "@pxlkit/gamification";
 
 export const retro16bitTheme: KioskTheme = {
   id: "retro-16bit",
@@ -22,7 +31,7 @@ export const retro16bitTheme: KioskTheme = {
   },
 
   typography: {
-    fontFamily: '"Inter", "Segoe UI", sans-serif',
+    fontFamily: '"Press Start 2P", monospace',
 
     headingWeight: 600,
     bodyWeight: 400,
@@ -44,5 +53,28 @@ export const retro16bitTheme: KioskTheme = {
   sounds: {
     notification: notificationSound,
   },
-  icons: {},
+  icons: {
+    notification: () => createElement(RetroIcon, { icon: Bell }),
+    loading: () => createElement(AnimatedIcon, { icon: Hourglass }),
+
+    "notification.success": () =>
+      createElement(RetroIcon, { icon: CheckCircle }),
+
+    "weather.thunderstorm": () => createElement(RetroIcon, { icon: Thunder }),
+    "weather.clear": () => createElement(RetroIcon, { icon: Sun }),
+    "weather.partly_cloudy": () => createElement(RetroIcon, { icon: CloudSun }),
+    "weather.overcast": () => createElement(RetroIcon, { icon: Cloud }),
+    "weather.fog": () => createElement(RetroIcon, { icon: Cloud }),
+    "weather.drizzle": () => createElement(RetroIcon, { icon: Rain }),
+    "weather.rain": () => createElement(RetroIcon, { icon: Rain }),
+    "weather.rain_showers": () => createElement(RetroIcon, { icon: Rain }),
+    "weather.snow": () => createElement(RetroIcon, { icon: Cloud }),
+
+    printer: () => createElement(RetroIcon, { icon: Robot }),
+
+    "status.offline": (props) =>
+      createElement(RetroIcon, { icon: Skull, ...props }),
+    "status.online": (props) =>
+      createElement(RetroIcon, { icon: LevelUp, ...props }),
+  },
 };

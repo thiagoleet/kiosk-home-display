@@ -1,9 +1,9 @@
-import { Bell, Circle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useKiosk } from "@/hooks/use-kiosk";
 import { useTranslation } from "@/hooks/use-translation";
 import { useWebSocketContext } from "@/hooks/use-websocket-context";
+import { ThemeIcon } from "../theme/theme-icon";
 
 const ONLINE_STATUS_DURATION = 3000;
 
@@ -60,7 +60,8 @@ const ConnectionStatusIndicator = ({
         .join(" ")}
       aria-hidden={!shouldShowConnectionStatus}
     >
-      <Circle
+      <ThemeIcon
+        name={isConnected ? "status.online" : "status.offline"}
         size={8}
         fill="currentColor"
         aria-hidden="true"
@@ -85,8 +86,8 @@ const NotificationIndicator = ({
       className="notification-indicator"
       aria-label={t("notification.active")}
     >
-      <Bell
-        size={18}
+      <ThemeIcon
+        name="notification"
         aria-hidden="true"
       />
 

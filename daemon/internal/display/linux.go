@@ -4,8 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
+)
+
+// activeGeometry matches the "1920x1080+0+0" field that xrandr prints for an
+// output that currently drives a CRTC. A connected output without one is not
+// configurable: xrandr answers --brightness with a BadMatch on RRSetCrtcConfig.
+var activeGeometry = regexp.MustCompile(
+	`^[0-9]+x[0-9]+\+[0-9]+\+[0-9]+$`,
 )
 
 // commandRunner runs an external command and returns its combined output.
@@ -90,7 +98,10 @@ func (c *LinuxController) SetBrightness(level int) error {
 	return nil
 }
 
-// connectedOutputs lists the xrandr outputs that have a screen attached.
+// connectedOutputs lists the xrandr outputs that have a screen attached and a
+// mode applied. Outputs that are merely connected are skipped: swapping a
+// display leaves the new output enumerated but unconfigured until a mode is
+// set, and asking xrandr to adjust its brightness fails with a BadMatch.
 func (c *LinuxController) connectedOutputs() ([]string, error) {
 	output, err := c.command("xrandr", "--query")
 	if err != nil {
@@ -107,7 +118,10 @@ func (c *LinuxController) connectedOutputs() ([]string, error) {
 		)
 	}
 
-	var outputs []string
+	var (
+		outputs   []string
+		connected int
+	)
 
 	for _, line := range strings.Split(output, "\n") {
 		fields := strings.Fields(line)
@@ -120,10 +134,23 @@ func (c *LinuxController) connectedOutputs() ([]string, error) {
 			continue
 		}
 
+		connected++
+
+		if !hasActiveMode(fields[2:]) {
+			continue
+		}
+
 		outputs = append(outputs, fields[0])
 	}
 
 	if len(outputs) == 0 {
+		if connected > 0 {
+			return nil, fmt.Errorf(
+				"%w: no connected output has a mode set",
+				ErrBrightnessUnsupported,
+			)
+		}
+
 		return nil, fmt.Errorf(
 			"%w: no connected output found",
 			ErrBrightnessUnsupported,
@@ -131,6 +158,24 @@ func (c *LinuxController) connectedOutputs() ([]string, error) {
 	}
 
 	return outputs, nil
+}
+
+// hasActiveMode reports whether the fields that follow "connected" carry the
+// geometry xrandr prints for an output that is driving a CRTC. The geometry
+// sits before the "(normal left inverted ...)" property list, optionally
+// preceded by "primary".
+func hasActiveMode(fields []string) bool {
+	for _, field := range fields {
+		if strings.HasPrefix(field, "(") {
+			return false
+		}
+
+		if activeGeometry.MatchString(field) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func runCommand(

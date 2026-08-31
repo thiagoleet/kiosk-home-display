@@ -87,26 +87,27 @@ func New(cfg config.Config) (*App, error) {
 		bus,
 	)
 
+	// Brightness is cosmetic, so a display that refuses the adjustment must not
+	// keep the daemon from starting: failing here makes systemd restart-loop
+	// over a screen that is otherwise perfectly usable.
 	if err := displayManager.SetBrightness(
 		cfg.Display.Brightness,
 	); err != nil {
-		if !errors.Is(
+		if errors.Is(
 			err,
 			display.ErrBrightnessUnsupported,
 		) {
-			db.Close()
-
-			return nil, fmt.Errorf(
-				"set initial display brightness: %w",
+			log.Printf(
+				"[APP] display mode %q ignores brightness: %v",
+				cfg.Display.Mode,
+				err,
+			)
+		} else {
+			log.Printf(
+				"[APP] initial display brightness not applied: %v",
 				err,
 			)
 		}
-
-		log.Printf(
-			"[APP] display mode %q ignores brightness: %v",
-			cfg.Display.Mode,
-			err,
-		)
 	}
 
 	idleManager := idle.NewManager(

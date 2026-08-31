@@ -146,6 +146,52 @@ func TestLinuxControllerReportsNoConnectedOutputAsUnsupported(t *testing.T) {
 	}
 }
 
+func TestLinuxControllerSkipsConnectedOutputWithoutMode(t *testing.T) {
+	controller, stub := newStubbedLinuxController()
+
+	stub.outputs["xrandr --query"] = `Screen 0: minimum 320 x 200, current 1920 x 1080, maximum 16384 x 16384
+HDMI-1 connected primary 1920x1080+0+0 (normal left inverted right x axis y axis) 698mm x 392mm
+HDMI-2 connected (normal left inverted right x axis y axis) 530mm x 300mm
+`
+
+	if err := controller.SetBrightness(40); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(stub.calls) != 2 {
+		t.Fatalf(
+			"expected only the active output to be adjusted, got %v",
+			stub.calls,
+		)
+	}
+
+	want := "--output HDMI-1 --brightness 0.40"
+
+	if got := strings.Join(stub.calls[1].args, " "); got != want {
+		t.Fatalf(
+			"expected args %q, got %q",
+			want,
+			got,
+		)
+	}
+}
+
+func TestLinuxControllerReportsInactiveOutputsAsUnsupported(t *testing.T) {
+	controller, stub := newStubbedLinuxController()
+
+	stub.outputs["xrandr --query"] =
+		"HDMI-2 connected (normal left inverted right) 530mm x 300mm\n"
+
+	err := controller.SetBrightness(50)
+
+	if !errors.Is(err, ErrBrightnessUnsupported) {
+		t.Fatalf(
+			"expected ErrBrightnessUnsupported, got %v",
+			err,
+		)
+	}
+}
+
 func TestLinuxControllerWakesAndSleepsWithXset(t *testing.T) {
 	controller, stub := newStubbedLinuxController()
 

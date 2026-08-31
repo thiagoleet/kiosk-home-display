@@ -20,7 +20,7 @@ export type ThemeIconName =
   | "weather.thunderstorm";
 
 export type ThemeIconProps = {
-  size?: number | string;
+  size?: number;
   className?: string;
 };
 

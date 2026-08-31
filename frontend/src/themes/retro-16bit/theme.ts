@@ -54,27 +54,39 @@ export const retro16bitTheme: KioskTheme = {
     notification: notificationSound,
   },
   icons: {
-    notification: () => createElement(RetroIcon, { icon: Bell }),
-    loading: () => createElement(AnimatedIcon, { icon: Hourglass }),
+    notification: (props) =>
+      createElement(RetroIcon, { icon: Bell, size: props.size }),
+    loading: (props) =>
+      createElement(AnimatedIcon, { icon: Hourglass, size: props.size }),
 
-    "notification.success": () =>
-      createElement(RetroIcon, { icon: CheckCircle }),
+    "notification.success": (props) =>
+      createElement(RetroIcon, { icon: CheckCircle, size: props.size }),
 
-    "weather.thunderstorm": () => createElement(RetroIcon, { icon: Thunder }),
-    "weather.clear": () => createElement(RetroIcon, { icon: Sun }),
-    "weather.partly_cloudy": () => createElement(RetroIcon, { icon: CloudSun }),
-    "weather.overcast": () => createElement(RetroIcon, { icon: Cloud }),
-    "weather.fog": () => createElement(RetroIcon, { icon: Cloud }),
-    "weather.drizzle": () => createElement(RetroIcon, { icon: Rain }),
-    "weather.rain": () => createElement(RetroIcon, { icon: Rain }),
-    "weather.rain_showers": () => createElement(RetroIcon, { icon: Rain }),
-    "weather.snow": () => createElement(RetroIcon, { icon: Cloud }),
+    "weather.thunderstorm": (props) =>
+      createElement(RetroIcon, { icon: Thunder, size: props.size }),
+    "weather.clear": (props) =>
+      createElement(RetroIcon, { icon: Sun, size: props.size }),
+    "weather.partly_cloudy": (props) =>
+      createElement(RetroIcon, { icon: CloudSun, size: props.size }),
+    "weather.overcast": (props) =>
+      createElement(RetroIcon, { icon: Cloud, size: props.size }),
+    "weather.fog": (props) =>
+      createElement(RetroIcon, { icon: Cloud, size: props.size }),
+    "weather.drizzle": (props) =>
+      createElement(RetroIcon, { icon: Rain, size: props.size }),
+    "weather.rain": (props) =>
+      createElement(RetroIcon, { icon: Rain, size: props.size }),
+    "weather.rain_showers": (props) =>
+      createElement(RetroIcon, { icon: Rain, size: props.size }),
+    "weather.snow": (props) =>
+      createElement(RetroIcon, { icon: Cloud, size: props.size }),
 
-    printer: () => createElement(RetroIcon, { icon: Robot }),
+    printer: (props) =>
+      createElement(RetroIcon, { icon: Robot, size: props.size }),
 
     "status.offline": (props) =>
-      createElement(RetroIcon, { icon: Skull, ...props }),
+      createElement(RetroIcon, { icon: Skull, size: props.size }),
     "status.online": (props) =>
-      createElement(RetroIcon, { icon: LevelUp, ...props }),
+      createElement(RetroIcon, { icon: LevelUp, size: props.size }),
   },
 };

@@ -6,7 +6,12 @@ export function WeatherViewWidget() {
 
   return (
     <section className="kiosk-weather">
-      {icon && <ThemeIcon name={icon} />}
+      {icon && (
+        <ThemeIcon
+          name={icon}
+          size={96}
+        />
+      )}
       <span>{temperature}</span>
     </section>
   );

@@ -80,6 +80,6 @@ export type ThemeIconName =
   | "status.online";
 
 export type ThemeIconProps = {
-  size?: number | string;
+  size?: number;
   className?: string;
 };

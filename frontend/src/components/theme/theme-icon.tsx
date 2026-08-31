@@ -6,7 +6,7 @@ import { useTheme } from "@/hooks/use-theme";
 
 type ThemeIconProps = {
   name: ThemeIconName;
-  size?: number | string;
+  size?: number;
 } & Omit<ComponentProps<"svg">, "name">;
 
 export function ThemeIcon({ name, ...props }: ThemeIconProps) {

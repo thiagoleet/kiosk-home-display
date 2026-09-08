@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { Carousel } from "@/components/carousel/carousel";
 import { HomeView } from "@/components/views/home-view";
 import { WeatherView } from "@/components/views/weather-view";
+import { ActivityView } from "../views/activity-view";
 
 import { useCarousel } from "@/hooks/use-carousel";
 
@@ -17,11 +18,12 @@ export function HomeLayout() {
     () => [
       { id: "home", content: <HomeView /> },
       { id: "weather", content: <WeatherView /> },
+      { id: "activity", content: <ActivityView /> },
     ],
     [],
   );
 
-  const { activeIndex } = useCarousel({ length: slides.length });
+  const { activeIndex, goTo } = useCarousel({ length: slides.length });
 
   return (
     <section className="home-layout">
@@ -29,6 +31,7 @@ export function HomeLayout() {
         <Carousel
           slides={slides}
           activeIndex={activeIndex}
+          onIndicatorClick={goTo}
         />
       </div>
     </section>

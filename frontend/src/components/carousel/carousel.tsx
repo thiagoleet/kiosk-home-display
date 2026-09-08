@@ -6,6 +6,7 @@ type CarouselProps = {
   slides: CarouselSlide[];
   activeIndex: number;
   hasIndicators?: boolean;
+  onIndicatorClick?: (index: number) => void;
 };
 
 type CarouselTrackStyle = CSSProperties & {
@@ -16,6 +17,7 @@ export function Carousel({
   slides,
   activeIndex,
   hasIndicators = true,
+  onIndicatorClick,
 }: CarouselProps) {
   if (slides.length === 0) {
     return null;
@@ -50,6 +52,9 @@ export function Carousel({
               key={slide.id}
               className="carousel__indicator"
               data-active={index === activeIndex}
+              onClick={() => {
+                onIndicatorClick?.(index);
+              }}
             />
           ))}
         </div>

@@ -8,14 +8,25 @@ import { MAX_ACTIVITIES } from "../constants/activity";
 import type { Activity } from "../types/activity";
 import type { WebSocketMessage } from "../types/websocket";
 
-export function useActivities() {
+type UseActivitiesProps = {
+  maxActivities?: number;
+};
+
+export function useActivities({
+  maxActivities = MAX_ACTIVITIES,
+}: UseActivitiesProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
 
   const { subscribe } = useWebSocketContext();
 
-  const addActivity = useCallback((activity: Activity) => {
-    setActivities((current) => [activity, ...current].slice(0, MAX_ACTIVITIES));
-  }, []);
+  const addActivity = useCallback(
+    (activity: Activity) => {
+      setActivities((current) =>
+        [activity, ...current].slice(0, maxActivities),
+      );
+    },
+    [maxActivities],
+  );
 
   const handleMessage = useCallback(
     (message: WebSocketMessage) => {
@@ -39,7 +50,7 @@ export function useActivities() {
           return;
         }
 
-        setActivities(activities.slice(0, MAX_ACTIVITIES));
+        setActivities(activities.slice(0, maxActivities));
       })
       .catch((error) => {
         console.error("Failed to load activities:", error);
@@ -48,7 +59,7 @@ export function useActivities() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [maxActivities]);
 
   useEffect(() => {
     return subscribe("activity", handleMessage);

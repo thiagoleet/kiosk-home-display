@@ -3,6 +3,7 @@
   flex-direction: column;
 
   min-width: 0;
+  width: 100%;
 }
 
 .activity-widget__list {

@@ -5,6 +5,10 @@ import type { NotificationContext } from "@/types/notification";
 import { useTranslation } from "@/hooks/use-translation";
 import { useActivities } from "@/hooks/use-activities";
 
+type ActivityWidgetProps = {
+  maxActivities?: number;
+};
+
 const activityIcons: Record<NotificationContext, LucideIcon> = {
   printer: Printer,
   system: Info,
@@ -25,10 +29,10 @@ function formatTimestamp(timestamp: string, locale: string) {
   }).format(date);
 }
 
-export function ActivityWidget() {
+export function ActivityWidget({ maxActivities }: ActivityWidgetProps) {
   const { locale, t } = useTranslation();
 
-  const { activities } = useActivities();
+  const { activities } = useActivities({ maxActivities });
 
   return (
     <section className="widget activity-widget">

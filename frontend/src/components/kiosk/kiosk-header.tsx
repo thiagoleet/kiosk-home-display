@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { useKiosk } from "@/hooks/use-kiosk";
+// import { useKiosk } from "@/hooks/use-kiosk";
 import { useTranslation } from "@/hooks/use-translation";
 import { useWebSocketContext } from "@/hooks/use-websocket-context";
 import { ThemeIcon } from "../theme/theme-icon";
@@ -103,11 +103,12 @@ export function KioskHeader({ hasNotification }: KioskHeaderProps) {
   const { status } = useWebSocketContext();
 
   const isConnected = status === "connected";
-  const { profile } = useKiosk();
+  // const { profile } = useKiosk();
 
   return (
     <header className="kiosk-header">
-      <h1 className="kiosk-name">{profile.name}</h1>
+      {/* <h1 className="kiosk-name">{profile.name}</h1> */}
+      <div className="kiosk-name"></div>
 
       <div className="kiosk-header__status">
         <NotificationIndicator hasNotification={hasNotification} />

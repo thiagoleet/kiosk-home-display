@@ -4,9 +4,6 @@ import { Carousel } from "@/components/carousel/carousel";
 import { HomeView } from "@/components/views/home-view";
 import { WeatherView } from "@/components/views/weather-view";
 
-import { ActivityWidget } from "@/components/widgets/activity-widget";
-import { PrinterWidget } from "@/components/widgets/printer-widget";
-
 import { useCarousel } from "@/hooks/use-carousel";
 
 import type { CarouselSlide } from "@/types/carousel";
@@ -34,11 +31,6 @@ export function HomeLayout() {
           activeIndex={activeIndex}
         />
       </div>
-
-      <footer className="home-layout__footer">
-        <PrinterWidget />
-        <ActivityWidget />
-      </footer>
     </section>
   );
 }

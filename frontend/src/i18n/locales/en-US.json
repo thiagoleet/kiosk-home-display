@@ -16,5 +16,18 @@
   "printer.state": "State: {{state}}",
   "printer.title": "Printer",
   "status.offline": "OFFLINE",
-  "status.online": "ONLINE"
+  "status.online": "ONLINE",
+  "weather.condition": "Condition: {{condition}}",
+  "weather.condition.clear": "Clear",
+  "weather.condition.partly_cloudy": "Partly Cloudy",
+  "weather.condition.overcast": "Overcast",
+  "weather.condition.fog": "Fog",
+  "weather.condition.drizzle": "Drizzle",
+  "weather.condition.rain": "Rain",
+  "weather.condition.rain_showers": "Rain Showers",
+  "weather.condition.snow": "Snow",
+  "weather.condition.thunderstorm": "Thunderstorm",
+  "weather.humidity": "Humidity: {{humidity}}%",
+  "weather.windSpeed": "Wind Speed: {{windSpeed}} mph",
+  "weather.title": "Weather"
 }

@@ -16,5 +16,18 @@
   "printer.state": "Status: {{state}}",
   "printer.title": "Impressora",
   "status.offline": "OFFLINE",
-  "status.online": "ONLINE"
+  "status.online": "ONLINE",
+  "weather.condition": "Condição: {{condition}}",
+  "weather.condition.clear": "Limpo",
+  "weather.condition.partly_cloudy": "Parcialmente Nublado",
+  "weather.condition.overcast": "Nublado",
+  "weather.condition.fog": "Nevoeiro",
+  "weather.condition.drizzle": "Chuvisco",
+  "weather.condition.rain": "Chuva",
+  "weather.condition.rain_showers": "Chuvas Levíssimas",
+  "weather.condition.snow": "Neve",
+  "weather.condition.thunderstorm": "Tempestade",
+  "weather.humidity": "Umidade: {{humidity}}%",
+  "weather.windSpeed": "Velocidade do Vento: {{windSpeed}} mph",
+  "weather.title": "Clima"
 }

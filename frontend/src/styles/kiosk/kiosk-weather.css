@@ -11,3 +11,21 @@
   line-height: 1.5;
   letter-spacing: -0.02em;
 }
+
+.kiosk-weather-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.kiosk-weather-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  color: var(--color-foreground);
+
+  font-size: clamp(1rem, 1vw, 2rem);
+  font-weight: var(--font-heading-weight);
+  line-height: 1.5;
+  letter-spacing: -0.02em;
+}

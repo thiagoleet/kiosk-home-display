@@ -9,6 +9,23 @@ import { useCarousel } from "@/hooks/use-carousel";
 
 import type { CarouselSlide } from "@/types/carousel";
 
+function HomeEffects() {
+  const items = Array.from({ length: 100 }, (_, index) => index);
+
+  return (
+    <>
+      {items.map((item) => (
+        <div
+          key={item}
+          className="circle-container"
+        >
+          <div className="circle"></div>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export function HomeLayout() {
   /**
    * The home view is the first and default slide.
@@ -34,6 +51,8 @@ export function HomeLayout() {
           onIndicatorClick={goTo}
         />
       </div>
+
+      <HomeEffects />
     </section>
   );
 }

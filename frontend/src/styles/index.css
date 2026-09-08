@@ -25,3 +25,5 @@
 @import "./widgets/widget.css";
 @import "./widgets/printer-widget.css";
 @import "./widgets/activity-widget.css";
+
+@import "./effects/particles.css";

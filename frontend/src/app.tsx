@@ -7,10 +7,13 @@ import { KioskScreen } from "./components/kiosk/kiosk-screen";
 import { useNotifications } from "./hooks/use-notifications";
 import { useScreenMode } from "./hooks/use-screen-mode";
 import { useKioskState } from "./hooks/use-kiosk-state";
+import { useSystemRefresh } from "./hooks/use-system-refresh";
 
 function App() {
   const { activeNotification } = useNotifications();
   const { state } = useKioskState();
+
+  useSystemRefresh();
 
   const { mode } = useScreenMode({
     notification: activeNotification,

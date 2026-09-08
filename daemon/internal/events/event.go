@@ -17,6 +17,8 @@ const (
 
 	EventNotification Type = "notification"
 
+	EventSystemRefresh Type = "system.refresh"
+
 	EventActivity Type = "activity"
 )
 

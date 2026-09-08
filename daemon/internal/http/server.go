@@ -51,6 +51,8 @@ func NewServer(
 		weatherService,
 	)
 
+	systemHandler := NewSystemHandler(bus)
+
 	mux.Handle(
 		"/ws",
 		websocketServer.Handler(),
@@ -99,6 +101,11 @@ func NewServer(
 	mux.HandleFunc(
 		"/api/weather",
 		weatherHandler.Current,
+	)
+
+	mux.HandleFunc(
+		"/api/system/refresh",
+		systemHandler.Refresh,
 	)
 
 	return &Server{

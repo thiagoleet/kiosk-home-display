@@ -7,6 +7,7 @@ export type WebSocketMessageType =
   | "printer.started"
   | "printer.completed"
   | "notification"
+  | "system.refresh"
   | "activity";
 
 export type WebSocketMessage<T = unknown> = {

@@ -51,6 +51,13 @@ func newStubbedWaylandController() (
 	controller := NewWaylandController()
 	controller.command = stub.run
 	controller.uid = 1000
+	// The fallback path by default: most of these tests cover wlr-randr.
+	controller.lookPath = func(name string) (string, error) {
+		return "", &exec.Error{
+			Name: name,
+			Err:  exec.ErrNotFound,
+		}
+	}
 	controller.lookupEnv = func(string) (string, bool) {
 		return "", false
 	}
@@ -342,4 +349,104 @@ func writeEmptyFile(path string) error {
 	}
 
 	return file.Close()
+}
+
+// wlopm powers the sink without touching the output layout, so it is the path
+// to take whenever it is installed.
+func TestWaylandControllerPrefersWlopm(t *testing.T) {
+	controller, stub := newStubbedWaylandController()
+
+	controller.lookPath = func(name string) (string, error) {
+		if name == "wlopm" {
+			return "/usr/bin/wlopm", nil
+		}
+
+		return "", &exec.Error{
+			Name: name,
+			Err:  exec.ErrNotFound,
+		}
+	}
+
+	if err := controller.Sleep(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(stub.calls) != 1 {
+		t.Fatalf(
+			"expected one command, got %v",
+			stub.calls,
+		)
+	}
+
+	want := "wlopm --off *"
+
+	got := strings.Join(
+		append(
+			[]string{stub.calls[0].name},
+			stub.calls[0].args...,
+		),
+		" ",
+	)
+
+	if got != want {
+		t.Fatalf(
+			"expected command %q, got %q",
+			want,
+			got,
+		)
+	}
+}
+
+func TestWaylandControllerWakesWithWlopm(t *testing.T) {
+	controller, stub := newStubbedWaylandController()
+
+	controller.lookPath = func(name string) (string, error) {
+		return "/usr/bin/" + name, nil
+	}
+
+	if err := controller.Wake(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := "wlopm --on *"
+
+	got := strings.Join(
+		append(
+			[]string{stub.calls[0].name},
+			stub.calls[0].args...,
+		),
+		" ",
+	)
+
+	if got != want {
+		t.Fatalf(
+			"expected command %q, got %q",
+			want,
+			got,
+		)
+	}
+}
+
+// A compositor that refuses to re-enable a disabled output leaves the screen
+// dark, so the error has to point at the tool that avoids the problem.
+func TestWaylandControllerSuggestsWlopmWhenConfigurationIsRefused(t *testing.T) {
+	controller, stub := newStubbedWaylandController()
+
+	stub.outputs["wlr-randr --output HDMI-A-1 --on"] =
+		"failed to apply configuration\n"
+	stub.errs["wlr-randr --output HDMI-A-1 --on"] =
+		errors.New("exit status 1")
+
+	err := controller.Wake()
+
+	if err == nil {
+		t.Fatal("expected an error when the configuration is refused")
+	}
+
+	if !strings.Contains(err.Error(), "wlopm") {
+		t.Fatalf(
+			"expected the error to suggest wlopm, got %v",
+			err,
+		)
+	}
 }

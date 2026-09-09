@@ -77,14 +77,28 @@ Read the session on `seat0`, not the one you are typing in: over SSH
   `XAUTHORITY` in the env file.
 - `wayland` → `DISPLAY_MODE=wayland`. The default on Raspberry Pi OS Bookworm
   and later (labwc, wayfire), where `xset` cannot reach the physical output.
-  Powers the screen by disabling and re-enabling the outputs with `wlr-randr`,
-  from the `wlr-randr` package. No env file entries are required: a system
-  service inherits no session variables, so the daemon derives them from the
-  user it runs as — `/run/user/<uid>` for the runtime directory and whichever
-  `wayland-*` socket sits inside it. Set `XDG_RUNTIME_DIR` and
-  `WAYLAND_DISPLAY` only to override that. There is no brightness control on
-  this path, so the service logs that brightness is unsupported and starts
-  anyway.
+  Install `wlopm` for this mode:
+
+  ```sh
+  sudo apt install wlopm
+  ```
+
+  `wlopm` speaks `zwlr_output_power_management_v1`, the Wayland equivalent of
+  DPMS: the output keeps its mode and position and only the sink powers down.
+  Without it the daemon falls back to `wlr-randr`, which disables the output
+  instead — that reflows every surface in the session, and on some compositor
+  and display combinations it cannot be undone: re-enabling answers `failed to
+  apply configuration` and the screen stays dark until the session restarts.
+  Treat the fallback as a last resort. `wlopm` is packaged from Debian trixie
+  on (Raspberry Pi OS 13); on Bookworm it has to be built from source, and the
+  `linux` mode with an X11 session is the easier path there.
+
+  No env file entries are required: a system service inherits no session
+  variables, so the daemon derives them from the user it runs as —
+  `/run/user/<uid>` for the runtime directory and whichever `wayland-*` socket
+  sits inside it. Set `XDG_RUNTIME_DIR` and `WAYLAND_DISPLAY` only to override
+  that. There is no brightness control on this path, so the service logs that
+  brightness is unsupported and starts anyway.
 - `virtual` → logs the transitions and touches no hardware. The API still
   answers `200`, which makes this the quietest way for a box to look healthy
   while the screen never turns off.
@@ -113,8 +127,10 @@ journalctl -u kiosk-home-display -n 20
 
 A `[DISPLAY] sleep` line means the service is in `virtual` mode. Otherwise the
 error names what is missing: the package, the X session, or the compositor
-socket. `no wayland socket in /run/user/<uid>` means the compositor is not
-running as the service user — either the desktop session belongs to another
+socket. `the compositor refused the output configuration` means the `wlr-randr`
+fallback is in use and the compositor will not take it — install `wlopm`.
+`no wayland socket in /run/user/<uid>` means the compositor is not running as
+the service user — either the desktop session belongs to another
 user, or the Pi boots to a console with no compositor at all, in which case
 neither real mode can power the screen off. Confirm with:
 

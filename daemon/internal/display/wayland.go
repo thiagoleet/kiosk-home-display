@@ -9,16 +9,22 @@ import (
 	"strings"
 )
 
-// WaylandController drives the screen with wlr-randr, the wlr-output-management
-// client that the compositors on Raspberry Pi OS Bookworm and later understand
-// (labwc, wayfire). Wayland has no DPMS and no xset, so sleeping disables the
-// output and waking re-enables it, which powers the HDMI link down all the
-// same.
+// WaylandController powers the screen on the compositors that Raspberry Pi OS
+// ships since Bookworm (labwc, wayfire), where there is no DPMS and no xset.
+//
+// It prefers wlopm, which speaks zwlr_output_power_management_v1 — the Wayland
+// equivalent of DPMS. The output keeps its mode and position and only the sink
+// powers down, so nothing in the session is reconfigured. wlr-randr is the
+// fallback for hosts without wlopm, and it works differently: it disables the
+// output altogether, which reflows every surface and, on some compositor and
+// display combinations, cannot be undone — re-enabling answers "failed to
+// apply configuration" and the screen stays dark.
 type WaylandController struct {
 	command waylandRunner
 
-	// The rest resolves the session wlr-randr has to talk to. They are fields
-	// so tests can describe a session without one being present.
+	// The rest resolves the session and the tooling. They are fields so tests
+	// can describe a host without one being present.
+	lookPath  func(string) (string, error)
 	lookupEnv func(string) (string, bool)
 	sockets   func(directory string) ([]string, error)
 	uid       int
@@ -27,6 +33,7 @@ type WaylandController struct {
 func NewWaylandController() *WaylandController {
 	return &WaylandController{
 		command:   runCommandWithEnv,
+		lookPath:  exec.LookPath,
 		lookupEnv: os.LookupEnv,
 		sockets:   waylandSockets,
 		uid:       os.Getuid(),
@@ -34,16 +41,16 @@ func NewWaylandController() *WaylandController {
 }
 
 func (c *WaylandController) Wake() error {
-	return c.applyToOutputs("--on")
+	return c.setPower("on")
 }
 
 func (c *WaylandController) Sleep() error {
-	return c.applyToOutputs("--off")
+	return c.setPower("off")
 }
 
-// SetBrightness is not available: wlr-output-management exposes no brightness
-// or gamma channel. The error is the sentinel the daemon tolerates at startup,
-// so a wayland kiosk boots with the brightness setting simply ignored.
+// SetBrightness is not available: neither protocol exposes a brightness or
+// gamma channel. The error is the sentinel the daemon tolerates at startup, so
+// a wayland kiosk boots with the brightness setting simply ignored.
 func (c *WaylandController) SetBrightness(level int) error {
 	return fmt.Errorf(
 		"%w: the wayland display mode has no brightness control",
@@ -51,10 +58,53 @@ func (c *WaylandController) SetBrightness(level int) error {
 	)
 }
 
-func (c *WaylandController) applyToOutputs(state string) error {
+func (c *WaylandController) setPower(state string) error {
 	env, err := c.sessionEnv()
 	if err != nil {
 		return err
+	}
+
+	// Looked up per call, so installing wlopm takes effect without restarting
+	// the service.
+	if _, err := c.lookPath("wlopm"); err == nil {
+		return c.setPowerWithWlopm(env, state)
+	}
+
+	return c.setPowerWithWlrRandr(env, state)
+}
+
+func (c *WaylandController) setPowerWithWlopm(
+	env []string,
+	state string,
+) error {
+	// wlopm takes "*" as every output. The argument reaches it untouched: no
+	// shell is involved, so there is nothing to glob it against.
+	result, err := c.command(
+		env,
+		"wlopm",
+		"--"+state,
+		"*",
+	)
+
+	if err != nil {
+		return fmt.Errorf(
+			"wlopm --%s: %w",
+			state,
+			waylandToolError("wlopm", env, result, err),
+		)
+	}
+
+	return nil
+}
+
+func (c *WaylandController) setPowerWithWlrRandr(
+	env []string,
+	state string,
+) error {
+	flag := "--off"
+
+	if state == "on" {
+		flag = "--on"
 	}
 
 	outputs, err := c.outputs(env)
@@ -68,15 +118,15 @@ func (c *WaylandController) applyToOutputs(state string) error {
 			"wlr-randr",
 			"--output",
 			output,
-			state,
+			flag,
 		)
 
 		if err != nil {
 			return fmt.Errorf(
 				"apply %s to output %s: %w",
-				state,
+				flag,
 				output,
-				wlrRandrError(env, result, err),
+				waylandToolError("wlr-randr", env, result, err),
 			)
 		}
 	}
@@ -84,11 +134,11 @@ func (c *WaylandController) applyToOutputs(state string) error {
 	return nil
 }
 
-// sessionEnv supplies the two variables wlr-randr needs. A system service
-// starts outside the graphical session and inherits neither, but it does run as
-// the user that owns that session: the runtime directory is /run/user/<uid> and
-// the compositor's socket sits inside it. Values already in the environment win,
-// so the env file can still pin them.
+// sessionEnv supplies the two variables the tools need. A system service starts
+// outside the graphical session and inherits neither, but it does run as the
+// user that owns that session: the runtime directory is /run/user/<uid> and the
+// compositor's socket sits inside it. Values already in the environment win, so
+// the env file can still pin them.
 func (c *WaylandController) sessionEnv() ([]string, error) {
 	runtimeDir, ok := c.lookupEnv("XDG_RUNTIME_DIR")
 
@@ -139,7 +189,12 @@ func (c *WaylandController) outputs(
 ) ([]string, error) {
 	result, err := c.command(env, "wlr-randr")
 	if err != nil {
-		return nil, wlrRandrError(env, result, err)
+		return nil, waylandToolError(
+			"wlr-randr",
+			env,
+			result,
+			err,
+		)
 	}
 
 	var outputs []string
@@ -196,34 +251,50 @@ func waylandSockets(
 	return sockets, nil
 }
 
-// wlrRandrError names the ways wlr-randr fails on a kiosk: the package is
-// missing, the socket it was pointed at is not the compositor's, or the
-// compositor refuses to manage outputs. The resolved socket goes into the
-// message, since the daemon picks it without being told.
-func wlrRandrError(
+// waylandToolError names the ways these tools fail on a kiosk: the package is
+// missing, the socket they were pointed at is not the compositor's, or the
+// compositor turns the request down. The resolved socket goes into the message,
+// since the daemon picks it without being told.
+func waylandToolError(
+	tool string,
 	env []string,
 	output string,
 	err error,
 ) error {
 	if errors.Is(err, exec.ErrNotFound) {
 		return fmt.Errorf(
-			"wlr-randr is not installed, install the wlr-randr package: %w",
-			err,
-		)
-	}
-
-	if strings.Contains(output, "compositor doesn't support") {
-		return fmt.Errorf(
-			"the compositor does not support wlr-output-management: %w",
+			"%s is not installed, install the %s package: %w",
+			tool,
+			tool,
 			err,
 		)
 	}
 
 	if strings.Contains(output, "failed to connect") {
 		return fmt.Errorf(
-			"wlr-randr could not connect to %s in %s, check that the compositor runs as the service user: %w",
+			"%s could not connect to %s in %s, check that the compositor runs as the service user: %w",
+			tool,
 			envValue(env, "WAYLAND_DISPLAY"),
 			envValue(env, "XDG_RUNTIME_DIR"),
+			err,
+		)
+	}
+
+	if strings.Contains(output, "doesn't support") ||
+		strings.Contains(output, "not supported") {
+		return fmt.Errorf(
+			"the compositor does not support the protocol %s needs: %w",
+			tool,
+			err,
+		)
+	}
+
+	// Disabling an output is not always reversible: the compositor can refuse
+	// to re-enable it, and then the screen stays dark. wlopm never gets here,
+	// because powering a sink down leaves the output configured.
+	if strings.Contains(output, "failed to apply configuration") {
+		return fmt.Errorf(
+			"the compositor refused the output configuration; install wlopm, which powers the screen without reconfiguring outputs: %w",
 			err,
 		)
 	}

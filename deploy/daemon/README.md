@@ -85,13 +85,18 @@ Read the session on `seat0`, not the one you are typing in: over SSH
 
   `wlopm` speaks `zwlr_output_power_management_v1`, the Wayland equivalent of
   DPMS: the output keeps its mode and position and only the sink powers down.
-  Without it the daemon falls back to `wlr-randr`, which disables the output
-  instead — that reflows every surface in the session, and on some compositor
-  and display combinations it cannot be undone: re-enabling answers `failed to
-  apply configuration` and the screen stays dark until the session restarts.
-  Treat the fallback as a last resort. `wlopm` is packaged from Debian trixie
-  on (Raspberry Pi OS 13); on Bookworm it has to be built from source, and the
-  `linux` mode with an X11 session is the easier path there.
+  It is effectively required. Without it, sleeping fails with a message saying
+  so, because the only alternative — `wlr-randr` disabling the output — reflows
+  every surface in the session and, on some compositor and display
+  combinations, cannot be undone: re-enabling answers `failed to apply
+  configuration` and the screen stays dark until the session restarts. Since
+  the daemon sleeps the display on a timer, that would repeat every
+  `IDLE_TIMEOUT`. Set `WAYLAND_ALLOW_OUTPUT_DISABLE=true` to use the fallback
+  anyway, on a host where it is known to work.
+
+  `wlopm` is packaged from Debian trixie on (Raspberry Pi OS 13). On Bookworm
+  it has to be built from source, and an X11 session with `DISPLAY_MODE=linux`
+  is the easier path there.
 
   Waking re-enables any output that reports `Enabled: no` before powering the
   sinks back on, so a screen the fallback switched off recovers on the next

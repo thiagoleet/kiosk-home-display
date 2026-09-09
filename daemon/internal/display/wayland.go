@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -14,6 +15,12 @@ import (
 // installed, so nothing on this host can power the screen.
 var ErrWaylandToolsMissing = errors.New(
 	"neither wlopm nor wlr-randr is installed: install wlopm to power the screen",
+)
+
+// ErrWlopmRequired reports that only the wlr-randr fallback is available, and
+// that it has not been allowed to disable outputs.
+var ErrWlopmRequired = errors.New(
+	"wlopm is not installed: the wlr-randr fallback would disable the output, which some compositors refuse to re-enable, leaving the screen dark until the session restarts; install wlopm, or set WAYLAND_ALLOW_OUTPUT_DISABLE=true to accept that risk",
 )
 
 // WaylandController powers the screen on the compositors that Raspberry Pi OS
@@ -91,6 +98,15 @@ func (c *WaylandController) Sleep() error {
 		return ErrWaylandToolsMissing
 	}
 
+	// Disabling an output is the one thing here that can be irreversible: the
+	// compositor may refuse to re-enable it, and then the screen stays dark
+	// until the session restarts. A daemon that sleeps the display on a timer
+	// would repeat that every timeout, so the fallback runs only when it has
+	// been asked for by name.
+	if !c.outputDisableAllowed() {
+		return ErrWlopmRequired
+	}
+
 	log.Println(
 		"[DISPLAY] wlopm is not installed, disabling the output with wlr-randr instead; some compositors refuse to re-enable it",
 	)
@@ -104,6 +120,20 @@ func (c *WaylandController) available(tool string) bool {
 	_, err := c.lookPath(tool)
 
 	return err == nil
+}
+
+func (c *WaylandController) outputDisableAllowed() bool {
+	value, ok := c.lookupEnv(
+		"WAYLAND_ALLOW_OUTPUT_DISABLE",
+	)
+
+	if !ok {
+		return false
+	}
+
+	allowed, err := strconv.ParseBool(value)
+
+	return err == nil && allowed
 }
 
 // SetBrightness is not available: neither protocol exposes a brightness or
@@ -182,10 +212,15 @@ func (c *WaylandController) enableOutputs(
 			continue
 		}
 
+		// --preferred goes with --on because a disabled head carries no mode,
+		// and wlroots needs one to bring an output back. Without it the
+		// compositor has nothing to apply and answers "failed to apply
+		// configuration".
 		if err := c.applyOutput(
 			env,
 			output.name,
 			"--on",
+			"--preferred",
 		); err != nil {
 			return err
 		}
@@ -197,20 +232,23 @@ func (c *WaylandController) enableOutputs(
 func (c *WaylandController) applyOutput(
 	env []string,
 	output string,
-	flag string,
+	flags ...string,
 ) error {
+	args := append(
+		[]string{"--output", output},
+		flags...,
+	)
+
 	result, err := c.command(
 		env,
 		"wlr-randr",
-		"--output",
-		output,
-		flag,
+		args...,
 	)
 
 	if err != nil {
 		return fmt.Errorf(
 			"apply %s to output %s: %w",
-			flag,
+			strings.Join(flags, " "),
 			output,
 			waylandToolError("wlr-randr", env, result, err),
 		)

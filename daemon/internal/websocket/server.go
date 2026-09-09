@@ -102,6 +102,7 @@ func (s *Server) removeClient(client *Client) {
 
 func (s *Server) Start() {
 	s.bus.Subscribe(events.EventIdleTimeout, s.handleEvent)
+	s.bus.Subscribe(events.EventIdleSleep, s.handleEvent)
 	s.bus.Subscribe(events.EventScheduleOn, s.handleEvent)
 	s.bus.Subscribe(events.EventScheduleOff, s.handleEvent)
 

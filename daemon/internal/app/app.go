@@ -113,6 +113,7 @@ func New(cfg config.Config) (*App, error) {
 	idleManager := idle.NewManager(
 		bus,
 		cfg.Idle.Timeout,
+		cfg.Idle.SleepDelay,
 	)
 
 	location, err := time.LoadLocation(
@@ -251,8 +252,12 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func (a *App) registerHandlers() {
+	// The idle timeout itself only reaches the frontend, which raises the
+	// screensaver on a screen that is still lit. Powering the display down
+	// waits for the second stage of the countdown, so the screensaver is
+	// actually visible for a while before the panel goes dark.
 	a.bus.Subscribe(
-		events.EventIdleTimeout,
+		events.EventIdleSleep,
 		func(event events.Event) {
 			if err := a.display.Sleep(); err != nil {
 				log.Printf(
@@ -315,6 +320,12 @@ func (a *App) registerHandlers() {
 					err,
 				)
 			}
+
+			// Waking an already lit screen publishes no state change, so a
+			// notification arriving during the screensaver window would not
+			// reset the countdown through EventDisplayStateChanged and the
+			// display would go dark part way through the notification.
+			a.idle.Activity()
 		},
 	)
 }

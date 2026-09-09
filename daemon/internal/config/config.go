@@ -28,9 +28,12 @@ type DisplayConfig struct {
 	Brightness int
 }
 
+// SleepDelay is how long the screensaver stays on a lit screen after the
+// timeout before the display is powered down.
 type IdleConfig struct {
-	Enabled bool
-	Timeout time.Duration
+	Enabled    bool
+	Timeout    time.Duration
+	SleepDelay time.Duration
 }
 
 type SchedulerConfig struct {
@@ -68,8 +71,9 @@ func Default() Config {
 			Brightness: 100,
 		},
 		Idle: IdleConfig{
-			Enabled: true,
-			Timeout: 5 * time.Minute,
+			Enabled:    true,
+			Timeout:    5 * time.Minute,
+			SleepDelay: 5 * time.Minute,
 		},
 		Scheduler: SchedulerConfig{
 			Enabled:  true,
@@ -122,6 +126,12 @@ func (c Config) Validate() error {
 	if c.Idle.Enabled && c.Idle.Timeout <= 0 {
 		return fmt.Errorf(
 			"idle timeout must be greater than zero",
+		)
+	}
+
+	if c.Idle.Enabled && c.Idle.SleepDelay < 0 {
+		return fmt.Errorf(
+			"idle sleep delay cannot be negative",
 		)
 	}
 
@@ -283,6 +293,18 @@ func Load() (Config, error) {
 		}
 
 		config.Idle.Timeout = timeout
+	}
+
+	if value := os.Getenv("IDLE_SLEEP_DELAY"); value != "" {
+		delay, err := time.ParseDuration(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid IDLE_SLEEP_DELAY: %w",
+				err,
+			)
+		}
+
+		config.Idle.SleepDelay = delay
 	}
 
 	if value := os.Getenv("SCHEDULE_ENABLED"); value != "" {

@@ -33,6 +33,13 @@ func TestDefaultConfig(t *testing.T) {
 		)
 	}
 
+	if config.Idle.SleepDelay != 5*time.Minute {
+		t.Fatalf(
+			"expected idle sleep delay of 5 minutes, got %s",
+			config.Idle.SleepDelay,
+		)
+	}
+
 	if !config.Scheduler.Enabled {
 		t.Fatal("expected scheduler to be enabled")
 	}
@@ -97,6 +104,7 @@ func TestLoadOverridesDefaults(t *testing.T) {
 
 	t.Setenv("IDLE_ENABLED", "false")
 	t.Setenv("IDLE_TIMEOUT", "10m")
+	t.Setenv("IDLE_SLEEP_DELAY", "2m")
 
 	t.Setenv("SCHEDULE_ENABLED", "false")
 	t.Setenv("SCHEDULE_ON", "08:00")
@@ -137,6 +145,13 @@ func TestLoadOverridesDefaults(t *testing.T) {
 		t.Fatalf(
 			"expected 10 minute timeout, got %s",
 			config.Idle.Timeout,
+		)
+	}
+
+	if config.Idle.SleepDelay != 2*time.Minute {
+		t.Fatalf(
+			"expected 2 minute sleep delay, got %s",
+			config.Idle.SleepDelay,
 		)
 	}
 

@@ -164,11 +164,19 @@ next `SCHEDULE_ON`. It also settles the display on any later tick, so a boundary
 minute missed by a busy process, or skipped by the clock jump a Pi without an
 RTC makes when NTP lands, no longer strands the screen in the wrong state.
 
-The idle timeout keeps watching after it fires, and every wake restarts its
-countdown. Nothing reports user activity yet, so with `IDLE_ENABLED=true` the
-display stays on for `IDLE_TIMEOUT` after each wake and then sleeps again —
-including the wake at `SCHEDULE_ON`. Set `IDLE_ENABLED=false` to keep the screen
-on for the whole on window.
+The idle timeout runs in two stages. At `IDLE_TIMEOUT` it only announces
+idleness, which is what the frontend raises the screensaver on, and the screen
+stays lit so the screensaver can be seen; `IDLE_SLEEP_DELAY` later the display
+is powered down. Set `IDLE_SLEEP_DELAY=0` to power it down the moment it goes
+idle, which is what the daemon did before the screensaver window existed.
+
+The countdown keeps watching after it fires, and every wake restarts it — as
+does a notification, which would otherwise be cut short by a sleep the
+screensaver window had already scheduled. Nothing reports user activity yet, so
+with `IDLE_ENABLED=true` the display stays on for `IDLE_TIMEOUT` plus
+`IDLE_SLEEP_DELAY` after each wake and then sleeps again — including the wake at
+`SCHEDULE_ON`. Set `IDLE_ENABLED=false` to keep the screen on for the whole on
+window.
 
 The SQLite database lives at `/var/lib/kiosk-home-display/data/kiosk.db`,
 because the daemon resolves it relative to the working directory.

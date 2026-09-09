@@ -4,6 +4,7 @@ type Type string
 
 const (
 	EventIdleTimeout Type = "idle.timeout"
+	EventIdleSleep   Type = "idle.sleep"
 
 	EventScheduleOn  Type = "schedule.on"
 	EventScheduleOff Type = "schedule.off"

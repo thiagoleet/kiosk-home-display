@@ -2,6 +2,7 @@ export type WebSocketMessageType =
   | "state.snapshot"
   | "display.state_changed"
   | "idle.timeout"
+  | "idle.sleep"
   | "schedule.on"
   | "schedule.off"
   | "printer.started"

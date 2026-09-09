@@ -20,6 +20,8 @@ const wlrRandrOutput = `HDMI-A-1 "Samsung Electric Company SAMSUNG 0x00000001 (H
   Scale: 1.000000
 HDMI-A-2 "Unknown Unknown (HDMI-A-2)"
   Enabled: no
+  Modes:
+    1280x720 px, 60.000000 Hz (preferred)
 `
 
 type waylandCommandStub struct {
@@ -500,4 +502,33 @@ func TestWaylandControllerWakesWithoutTheOptIn(t *testing.T) {
 		"wlr-randr",
 		"wlr-randr --output HDMI-A-2 --on --preferred",
 	)
+}
+
+// A display in standby stops advertising modes, and then no configuration can
+// be applied to its output. The fix is at the screen, so the error has to say
+// that rather than relay the compositor's refusal.
+func TestWaylandControllerReportsAnOutputWithNoModes(t *testing.T) {
+	controller, stub := newStubbedWaylandController()
+
+	stub.outputs["wlr-randr"] = `HDMI-A-1 "Samsung Electric Company SAMSUNG (HDMI-A-1)"
+  Enabled: no
+`
+
+	err := controller.Wake()
+
+	if !errors.Is(err, ErrOutputNotReporting) {
+		t.Fatalf(
+			"expected ErrOutputNotReporting, got %v",
+			err,
+		)
+	}
+
+	if !strings.Contains(err.Error(), "HDMI-A-1") {
+		t.Fatalf(
+			"expected the error to name the output, got %v",
+			err,
+		)
+	}
+
+	assertCommands(t, stub, "wlr-randr")
 }

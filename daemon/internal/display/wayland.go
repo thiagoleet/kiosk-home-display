@@ -17,6 +17,13 @@ var ErrWaylandToolsMissing = errors.New(
 	"neither wlopm nor wlr-randr is installed: install wlopm to power the screen",
 )
 
+// ErrOutputNotReporting reports a disabled output whose display is not
+// advertising any mode, so nothing can bring it back until the screen itself
+// comes back.
+var ErrOutputNotReporting = errors.New(
+	"the display reports no modes and cannot be re-enabled: power-cycle the screen, or replug the HDMI cable",
+)
+
 // ErrWlopmRequired reports that only the wlr-randr fallback is available, and
 // that it has not been allowed to disable outputs.
 var ErrWlopmRequired = errors.New(
@@ -212,6 +219,18 @@ func (c *WaylandController) enableOutputs(
 			continue
 		}
 
+		// A display that stopped reporting itself over HDMI — in standby, or
+		// unplugged — leaves its output with an empty mode list, and no
+		// configuration can be applied to it. Naming that beats relaying the
+		// compositor's refusal, because the fix is at the screen, not here.
+		if output.modes == 0 {
+			return fmt.Errorf(
+				"%w: output %s",
+				ErrOutputNotReporting,
+				output.name,
+			)
+		}
+
 		// --preferred goes with --on because a disabled head carries no mode,
 		// and wlroots needs one to bring an output back. Without it the
 		// compositor has nothing to apply and answers "failed to apply
@@ -310,6 +329,7 @@ func (c *WaylandController) sessionEnv() ([]string, error) {
 type waylandOutput struct {
 	name    string
 	enabled bool
+	modes   int
 }
 
 func (c *WaylandController) outputs(
@@ -354,6 +374,15 @@ func (c *WaylandController) outputs(
 
 		if enabled, ok := parseEnabled(line); ok {
 			outputs[len(outputs)-1].enabled = enabled
+
+			continue
+		}
+
+		// Every entry under "Modes:" carries the resolution in pixels. The
+		// count matters because an output with no modes cannot be configured
+		// at all.
+		if strings.Contains(line, " px,") {
+			outputs[len(outputs)-1].modes++
 		}
 	}
 

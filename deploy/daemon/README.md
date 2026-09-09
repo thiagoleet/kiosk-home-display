@@ -143,8 +143,11 @@ A `[DISPLAY] sleep` line means the service is in `virtual` mode. Otherwise the
 error names what is missing: the package, the X session, or the compositor
 socket. `the compositor refused the output configuration` means the `wlr-randr`
 fallback is in use and the compositor will not take it — install `wlopm`.
-`no wayland socket in /run/user/<uid>` means the compositor is not running as
-the service user — either the desktop session belongs to another
+`the display reports no modes and cannot be re-enabled` means the screen itself
+dropped off the HDMI link while its output was disabled — power-cycle the
+display or replug the cable, since no software on the Pi can configure an output
+whose sink is not reporting. `no wayland socket in /run/user/<uid>` means the
+compositor is not running as the service user — either the desktop session belongs to another
 user, or the Pi boots to a console with no compositor at all, in which case
 neither real mode can power the screen off. Confirm with:
 

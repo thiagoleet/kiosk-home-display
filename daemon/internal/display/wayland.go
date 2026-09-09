@@ -3,10 +3,17 @@ package display
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+)
+
+// ErrWaylandToolsMissing reports that neither tool the wayland mode can use is
+// installed, so nothing on this host can power the screen.
+var ErrWaylandToolsMissing = errors.New(
+	"neither wlopm nor wlr-randr is installed: install wlopm to power the screen",
 )
 
 // WaylandController powers the screen on the compositors that Raspberry Pi OS
@@ -40,12 +47,63 @@ func NewWaylandController() *WaylandController {
 	}
 }
 
+// Wake re-enables any output that was left disabled before powering the sinks
+// back on. Nothing can power-manage a disabled output, so a screen that the
+// wlr-randr fallback switched off recovers here instead of needing the session
+// restarted.
 func (c *WaylandController) Wake() error {
-	return c.setPower("on")
+	env, err := c.sessionEnv()
+	if err != nil {
+		return err
+	}
+
+	hasWlopm := c.available("wlopm")
+	hasWlrRandr := c.available("wlr-randr")
+
+	if !hasWlopm && !hasWlrRandr {
+		return ErrWaylandToolsMissing
+	}
+
+	if hasWlrRandr {
+		if err := c.enableOutputs(env); err != nil {
+			return err
+		}
+	}
+
+	if !hasWlopm {
+		return nil
+	}
+
+	return c.setPowerWithWlopm(env, "on")
 }
 
 func (c *WaylandController) Sleep() error {
-	return c.setPower("off")
+	env, err := c.sessionEnv()
+	if err != nil {
+		return err
+	}
+
+	if c.available("wlopm") {
+		return c.setPowerWithWlopm(env, "off")
+	}
+
+	if !c.available("wlr-randr") {
+		return ErrWaylandToolsMissing
+	}
+
+	log.Println(
+		"[DISPLAY] wlopm is not installed, disabling the output with wlr-randr instead; some compositors refuse to re-enable it",
+	)
+
+	return c.disableOutputs(env)
+}
+
+// available reports whether a tool is on PATH. Looked up per call, so
+// installing wlopm takes effect without restarting the service.
+func (c *WaylandController) available(tool string) bool {
+	_, err := c.lookPath(tool)
+
+	return err == nil
 }
 
 // SetBrightness is not available: neither protocol exposes a brightness or
@@ -56,21 +114,6 @@ func (c *WaylandController) SetBrightness(level int) error {
 		"%w: the wayland display mode has no brightness control",
 		ErrBrightnessUnsupported,
 	)
-}
-
-func (c *WaylandController) setPower(state string) error {
-	env, err := c.sessionEnv()
-	if err != nil {
-		return err
-	}
-
-	// Looked up per call, so installing wlopm takes effect without restarting
-	// the service.
-	if _, err := c.lookPath("wlopm"); err == nil {
-		return c.setPowerWithWlopm(env, state)
-	}
-
-	return c.setPowerWithWlrRandr(env, state)
 }
 
 func (c *WaylandController) setPowerWithWlopm(
@@ -97,38 +140,80 @@ func (c *WaylandController) setPowerWithWlopm(
 	return nil
 }
 
-func (c *WaylandController) setPowerWithWlrRandr(
+func (c *WaylandController) disableOutputs(
 	env []string,
-	state string,
 ) error {
-	flag := "--off"
-
-	if state == "on" {
-		flag = "--on"
-	}
-
 	outputs, err := c.outputs(env)
 	if err != nil {
 		return err
 	}
 
 	for _, output := range outputs {
-		result, err := c.command(
-			env,
-			"wlr-randr",
-			"--output",
-			output,
-			flag,
-		)
-
-		if err != nil {
-			return fmt.Errorf(
-				"apply %s to output %s: %w",
-				flag,
-				output,
-				waylandToolError("wlr-randr", env, result, err),
-			)
+		if !output.enabled {
+			continue
 		}
+
+		if err := c.applyOutput(
+			env,
+			output.name,
+			"--off",
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// enableOutputs re-enables the outputs that report "Enabled: no" and leaves the
+// rest alone. Re-applying a configuration an output already has is not free:
+// compositors have been seen to reject the no-op with "failed to apply
+// configuration".
+func (c *WaylandController) enableOutputs(
+	env []string,
+) error {
+	outputs, err := c.outputs(env)
+	if err != nil {
+		return err
+	}
+
+	for _, output := range outputs {
+		if output.enabled {
+			continue
+		}
+
+		if err := c.applyOutput(
+			env,
+			output.name,
+			"--on",
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *WaylandController) applyOutput(
+	env []string,
+	output string,
+	flag string,
+) error {
+	result, err := c.command(
+		env,
+		"wlr-randr",
+		"--output",
+		output,
+		flag,
+	)
+
+	if err != nil {
+		return fmt.Errorf(
+			"apply %s to output %s: %w",
+			flag,
+			output,
+			waylandToolError("wlr-randr", env, result, err),
+		)
 	}
 
 	return nil
@@ -181,12 +266,17 @@ func (c *WaylandController) sessionEnv() ([]string, error) {
 	), nil
 }
 
-// outputs lists every output wlr-randr knows about, enabled or not. Waking has
-// to reach the outputs that sleeping disabled, and a disabled output still
-// appears in the listing, reporting "Enabled: no".
+// waylandOutput is one entry of the wlr-randr listing. A disabled output stays
+// in the listing, reporting "Enabled: no", which is what makes it possible to
+// tell a screen that is merely asleep from one whose output was switched off.
+type waylandOutput struct {
+	name    string
+	enabled bool
+}
+
 func (c *WaylandController) outputs(
 	env []string,
-) ([]string, error) {
+) ([]waylandOutput, error) {
 	result, err := c.command(env, "wlr-randr")
 	if err != nil {
 		return nil, waylandToolError(
@@ -197,22 +287,36 @@ func (c *WaylandController) outputs(
 		)
 	}
 
-	var outputs []string
+	var outputs []waylandOutput
 
 	for _, line := range strings.Split(result, "\n") {
+		if line == "" {
+			continue
+		}
+
 		// An output name opens a block in the first column; every property
 		// wlr-randr prints underneath it is indented.
-		if line == "" || line[0] == ' ' || line[0] == '\t' {
+		if line[0] != ' ' && line[0] != '\t' {
+			fields := strings.Fields(line)
+
+			if len(fields) == 0 {
+				continue
+			}
+
+			outputs = append(outputs, waylandOutput{
+				name: fields[0],
+			})
+
 			continue
 		}
 
-		fields := strings.Fields(line)
-
-		if len(fields) == 0 {
+		if len(outputs) == 0 {
 			continue
 		}
 
-		outputs = append(outputs, fields[0])
+		if enabled, ok := parseEnabled(line); ok {
+			outputs[len(outputs)-1].enabled = enabled
+		}
 	}
 
 	if len(outputs) == 0 {
@@ -222,6 +326,19 @@ func (c *WaylandController) outputs(
 	}
 
 	return outputs, nil
+}
+
+func parseEnabled(line string) (bool, bool) {
+	value, found := strings.CutPrefix(
+		strings.TrimSpace(line),
+		"Enabled:",
+	)
+
+	if !found {
+		return false, false
+	}
+
+	return strings.TrimSpace(value) == "yes", true
 }
 
 // waylandSockets lists the compositor sockets in a runtime directory. Each

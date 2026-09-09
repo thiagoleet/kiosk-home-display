@@ -138,3 +138,92 @@ func TestManagerRejectsInvalidBrightness(t *testing.T) {
 		}
 	}
 }
+
+// countingController records how often the manager drives it.
+type countingController struct {
+	wakes  int
+	sleeps int
+}
+
+func (c *countingController) Wake() error {
+	c.wakes++
+
+	return nil
+}
+
+func (c *countingController) Sleep() error {
+	c.sleeps++
+
+	return nil
+}
+
+func (c *countingController) SetBrightness(level int) error {
+	return nil
+}
+
+// The manager's state starts as StateOn at every restart, whatever the screen
+// is doing. Trusting it would answer the caller with success while the screen
+// stays dark, so both transitions re-assert the controller.
+func TestManagerReassertsTheControllerOnStaleState(t *testing.T) {
+	bus := events.NewBus()
+	controller := &countingController{}
+	manager := NewManager(controller, bus)
+
+	if err := manager.Wake(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if controller.wakes != 1 {
+		t.Fatalf(
+			"expected the controller to be woken once, got %d",
+			controller.wakes,
+		)
+	}
+
+	if err := manager.Sleep(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if err := manager.Sleep(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if controller.sleeps != 2 {
+		t.Fatalf(
+			"expected the controller to be slept twice, got %d",
+			controller.sleeps,
+		)
+	}
+}
+
+// Re-asserting must not turn into an event storm: only a real transition is
+// published.
+func TestManagerPublishesOnlyOnTransitions(t *testing.T) {
+	bus := events.NewBus()
+	controller := &countingController{}
+	manager := NewManager(controller, bus)
+
+	published := 0
+
+	bus.Subscribe(
+		events.EventDisplayStateChanged,
+		func(event events.Event) {
+			published++
+		},
+	)
+
+	if err := manager.Sleep(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if err := manager.Sleep(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if published != 1 {
+		t.Fatalf(
+			"expected 1 published state change, got %d",
+			published,
+		)
+	}
+}

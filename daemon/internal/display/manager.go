@@ -40,16 +40,23 @@ func (m *Manager) State() State {
 	return m.state
 }
 
+// Wake drives the controller even when the manager already believes the display
+// is on. That belief is only ever a guess: it starts as StateOn at every
+// restart, whatever the screen is actually doing, and anything else on the box
+// can power the screen down behind the daemon's back. Skipping the controller
+// on a stale belief is how the API comes to answer 200 while the screen stays
+// dark. Every controller is idempotent, so re-asserting costs one cheap
+// command, and the state change is still published only on a transition.
 func (m *Manager) Wake() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.state == StateOn {
-		return nil
-	}
-
 	if err := m.controller.Wake(); err != nil {
 		return err
+	}
+
+	if m.state == StateOn {
+		return nil
 	}
 
 	m.state = StateOn
@@ -59,16 +66,17 @@ func (m *Manager) Wake() error {
 	return nil
 }
 
+// Sleep re-asserts the controller for the same reason Wake does.
 func (m *Manager) Sleep() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.state == StateOff {
-		return nil
-	}
-
 	if err := m.controller.Sleep(); err != nil {
 		return err
+	}
+
+	if m.state == StateOff {
+		return nil
 	}
 
 	m.state = StateOff

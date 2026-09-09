@@ -93,6 +93,10 @@ Read the session on `seat0`, not the one you are typing in: over SSH
   on (Raspberry Pi OS 13); on Bookworm it has to be built from source, and the
   `linux` mode with an X11 session is the easier path there.
 
+  Waking re-enables any output that reports `Enabled: no` before powering the
+  sinks back on, so a screen the fallback switched off recovers on the next
+  wake instead of needing the session restarted.
+
   No env file entries are required: a system service inherits no session
   variables, so the daemon derives them from the user it runs as —
   `/run/user/<uid>` for the runtime directory and whichever `wayland-*` socket
@@ -124,6 +128,11 @@ powers the screen down.
 curl -s -X POST localhost:8080/api/display/sleep
 journalctl -u kiosk-home-display -n 20
 ```
+
+`{"status":"ok"}` now means the tools ran and reported success: both transitions
+drive the controller even when the daemon already believes the screen is in that
+state. That belief resets to on at every restart, so trusting it used to answer
+`200` on the first wake after a deploy without running anything.
 
 A `[DISPLAY] sleep` line means the service is in `virtual` mode. Otherwise the
 error names what is missing: the package, the X session, or the compositor

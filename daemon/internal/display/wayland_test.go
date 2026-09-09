@@ -8,6 +8,8 @@ import (
 	"testing"
 )
 
+// HDMI-A-2 is disabled, which is the state the wlr-randr fallback leaves an
+// output in after a sleep.
 const wlrRandrOutput = `HDMI-A-1 "Samsung Electric Company SAMSUNG 0x00000001 (HDMI-A-1)"
   Make: Samsung Electric Company
   Model: SAMSUNG
@@ -23,6 +25,10 @@ HDMI-A-2 "Unknown Unknown (HDMI-A-2)"
 type waylandCommandStub struct {
 	*commandStub
 
+	// installed stands in for PATH, so a test can describe a host with or
+	// without wlopm.
+	installed map[string]bool
+
 	env []string
 }
 
@@ -36,14 +42,32 @@ func (s *waylandCommandStub) run(
 	return s.commandStub.run(name, args...)
 }
 
+func (s *waylandCommandStub) commands() []string {
+	var commands []string
+
+	for _, call := range s.calls {
+		commands = append(commands, strings.Join(
+			append([]string{call.name}, call.args...),
+			" ",
+		))
+	}
+
+	return commands
+}
+
 // The stub describes a session the way a Pi does: nothing in the environment,
-// a runtime directory named after the service user, one compositor socket.
+// a runtime directory named after the service user, one compositor socket. Only
+// wlr-randr is installed, which is the host the fallback path exists for;
+// installTool adds wlopm where a test needs it.
 func newStubbedWaylandController() (
 	*WaylandController,
 	*waylandCommandStub,
 ) {
 	stub := &waylandCommandStub{
 		commandStub: newCommandStub(),
+		installed: map[string]bool{
+			"wlr-randr": true,
+		},
 	}
 
 	stub.outputs["wlr-randr"] = wlrRandrOutput
@@ -51,8 +75,11 @@ func newStubbedWaylandController() (
 	controller := NewWaylandController()
 	controller.command = stub.run
 	controller.uid = 1000
-	// The fallback path by default: most of these tests cover wlr-randr.
 	controller.lookPath = func(name string) (string, error) {
+		if stub.installed[name] {
+			return "/usr/bin/" + name, nil
+		}
+
 		return "", &exec.Error{
 			Name: name,
 			Err:  exec.ErrNotFound,
@@ -70,68 +97,125 @@ func newStubbedWaylandController() (
 	return controller, stub
 }
 
-func TestWaylandControllerDisablesEveryOutputOnSleep(t *testing.T) {
+func assertCommands(
+	t *testing.T,
+	stub *waylandCommandStub,
+	expected ...string,
+) {
+	t.Helper()
+
+	got := stub.commands()
+
+	if len(got) != len(expected) {
+		t.Fatalf(
+			"expected commands %v, got %v",
+			expected,
+			got,
+		)
+	}
+
+	for index, want := range expected {
+		if got[index] != want {
+			t.Fatalf(
+				"expected command %q, got %q",
+				want,
+				got[index],
+			)
+		}
+	}
+}
+
+// wlopm powers the sink and leaves the output configured, so it is the path to
+// take whenever it is installed.
+func TestWaylandControllerPrefersWlopmOnSleep(t *testing.T) {
+	controller, stub := newStubbedWaylandController()
+
+	stub.installed["wlopm"] = true
+
+	if err := controller.Sleep(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	assertCommands(t, stub, "wlopm --off *")
+}
+
+// Nothing can power-manage a disabled output, so a screen the fallback switched
+// off has to be re-enabled before wlopm is asked to power it on.
+func TestWaylandControllerReEnablesOutputsBeforePoweringOn(t *testing.T) {
+	controller, stub := newStubbedWaylandController()
+
+	stub.installed["wlopm"] = true
+
+	if err := controller.Wake(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	assertCommands(
+		t,
+		stub,
+		"wlr-randr",
+		"wlr-randr --output HDMI-A-2 --on",
+		"wlopm --on *",
+	)
+}
+
+func TestWaylandControllerDisablesEnabledOutputsWithoutWlopm(t *testing.T) {
 	controller, stub := newStubbedWaylandController()
 
 	if err := controller.Sleep(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expected := []string{
+	assertCommands(
+		t,
+		stub,
 		"wlr-randr",
 		"wlr-randr --output HDMI-A-1 --off",
-		"wlr-randr --output HDMI-A-2 --off",
-	}
-
-	if len(stub.calls) != len(expected) {
-		t.Fatalf(
-			"expected %d commands, got %v",
-			len(expected),
-			stub.calls,
-		)
-	}
-
-	for index, want := range expected {
-		call := stub.calls[index]
-
-		got := strings.Join(
-			append([]string{call.name}, call.args...),
-			" ",
-		)
-
-		if got != want {
-			t.Fatalf(
-				"expected command %q, got %q",
-				want,
-				got,
-			)
-		}
-	}
+	)
 }
 
-// Waking has to reach the outputs that sleeping disabled, so a disabled output
-// must not be filtered out of the listing.
-func TestWaylandControllerEnablesDisabledOutputOnWake(t *testing.T) {
+// Re-applying a configuration an output already has is not free: compositors
+// reject the no-op with "failed to apply configuration".
+func TestWaylandControllerLeavesEnabledOutputsAloneOnWake(t *testing.T) {
 	controller, stub := newStubbedWaylandController()
 
 	if err := controller.Wake(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	want := "wlr-randr --output HDMI-A-2 --on"
-
-	call := stub.calls[len(stub.calls)-1]
-
-	got := strings.Join(
-		append([]string{call.name}, call.args...),
-		" ",
+	assertCommands(
+		t,
+		stub,
+		"wlr-randr",
+		"wlr-randr --output HDMI-A-2 --on",
 	)
+}
 
-	if got != want {
+func TestWaylandControllerRequiresATool(t *testing.T) {
+	controller, stub := newStubbedWaylandController()
+
+	delete(stub.installed, "wlr-randr")
+
+	for name, call := range map[string]func() error{
+		"sleep": controller.Sleep,
+		"wake":  controller.Wake,
+	} {
+		if err := call(); !errors.Is(
+			err,
+			ErrWaylandToolsMissing,
+		) {
+			t.Fatalf(
+				"expected ErrWaylandToolsMissing on %s, got %v",
+				name,
+				err,
+			)
+		}
+	}
+
+	if len(stub.calls) != 0 {
 		t.Fatalf(
-			"expected command %q, got %q",
-			want,
-			got,
+			"expected no commands, got %v",
+			stub.calls,
 		)
 	}
 }
@@ -145,28 +229,12 @@ func TestWaylandControllerDerivesTheSessionFromTheServiceUser(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expected := []string{
+	assertEnv(
+		t,
+		stub,
 		"XDG_RUNTIME_DIR=/run/user/1000",
 		"WAYLAND_DISPLAY=wayland-1",
-	}
-
-	for _, want := range expected {
-		found := false
-
-		for _, entry := range stub.env {
-			if entry == want {
-				found = true
-			}
-		}
-
-		if !found {
-			t.Fatalf(
-				"expected %q in the command environment, got %v",
-				want,
-				stub.env,
-			)
-		}
-	}
+	)
 }
 
 func TestWaylandControllerKeepsSessionVariablesFromTheEnvironment(t *testing.T) {
@@ -194,10 +262,20 @@ func TestWaylandControllerKeepsSessionVariablesFromTheEnvironment(t *testing.T) 
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expected := []string{
+	assertEnv(
+		t,
+		stub,
 		"XDG_RUNTIME_DIR=/run/user/1001",
 		"WAYLAND_DISPLAY=wayland-0",
-	}
+	)
+}
+
+func assertEnv(
+	t *testing.T,
+	stub *waylandCommandStub,
+	expected ...string,
+) {
+	t.Helper()
 
 	for _, want := range expected {
 		found := false
@@ -246,7 +324,7 @@ func TestWaylandControllerReportsMissingSession(t *testing.T) {
 	}
 }
 
-func TestWaylandControllerReportsMissingWlrRandr(t *testing.T) {
+func TestWaylandControllerReportsAToolThatVanished(t *testing.T) {
 	controller, stub := newStubbedWaylandController()
 
 	stub.errs["wlr-randr"] = &exec.Error{
@@ -257,7 +335,7 @@ func TestWaylandControllerReportsMissingWlrRandr(t *testing.T) {
 	err := controller.Sleep()
 
 	if err == nil {
-		t.Fatal("expected an error when wlr-randr is missing")
+		t.Fatal("expected an error when wlr-randr cannot run")
 	}
 
 	if !strings.Contains(err.Error(), "wlr-randr is not installed") {
@@ -284,6 +362,30 @@ func TestWaylandControllerReportsUnreachableCompositor(t *testing.T) {
 	if !strings.Contains(err.Error(), "wayland-1") {
 		t.Fatalf(
 			"expected the error to name the socket it tried, got %v",
+			err,
+		)
+	}
+}
+
+// A compositor that refuses to re-enable a disabled output leaves the screen
+// dark, so the error has to point at the tool that avoids the problem.
+func TestWaylandControllerSuggestsWlopmWhenConfigurationIsRefused(t *testing.T) {
+	controller, stub := newStubbedWaylandController()
+
+	stub.outputs["wlr-randr --output HDMI-A-2 --on"] =
+		"failed to apply configuration\n"
+	stub.errs["wlr-randr --output HDMI-A-2 --on"] =
+		errors.New("exit status 1")
+
+	err := controller.Wake()
+
+	if err == nil {
+		t.Fatal("expected an error when the configuration is refused")
+	}
+
+	if !strings.Contains(err.Error(), "wlopm") {
+		t.Fatalf(
+			"expected the error to suggest wlopm, got %v",
 			err,
 		)
 	}
@@ -349,104 +451,4 @@ func writeEmptyFile(path string) error {
 	}
 
 	return file.Close()
-}
-
-// wlopm powers the sink without touching the output layout, so it is the path
-// to take whenever it is installed.
-func TestWaylandControllerPrefersWlopm(t *testing.T) {
-	controller, stub := newStubbedWaylandController()
-
-	controller.lookPath = func(name string) (string, error) {
-		if name == "wlopm" {
-			return "/usr/bin/wlopm", nil
-		}
-
-		return "", &exec.Error{
-			Name: name,
-			Err:  exec.ErrNotFound,
-		}
-	}
-
-	if err := controller.Sleep(); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if len(stub.calls) != 1 {
-		t.Fatalf(
-			"expected one command, got %v",
-			stub.calls,
-		)
-	}
-
-	want := "wlopm --off *"
-
-	got := strings.Join(
-		append(
-			[]string{stub.calls[0].name},
-			stub.calls[0].args...,
-		),
-		" ",
-	)
-
-	if got != want {
-		t.Fatalf(
-			"expected command %q, got %q",
-			want,
-			got,
-		)
-	}
-}
-
-func TestWaylandControllerWakesWithWlopm(t *testing.T) {
-	controller, stub := newStubbedWaylandController()
-
-	controller.lookPath = func(name string) (string, error) {
-		return "/usr/bin/" + name, nil
-	}
-
-	if err := controller.Wake(); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	want := "wlopm --on *"
-
-	got := strings.Join(
-		append(
-			[]string{stub.calls[0].name},
-			stub.calls[0].args...,
-		),
-		" ",
-	)
-
-	if got != want {
-		t.Fatalf(
-			"expected command %q, got %q",
-			want,
-			got,
-		)
-	}
-}
-
-// A compositor that refuses to re-enable a disabled output leaves the screen
-// dark, so the error has to point at the tool that avoids the problem.
-func TestWaylandControllerSuggestsWlopmWhenConfigurationIsRefused(t *testing.T) {
-	controller, stub := newStubbedWaylandController()
-
-	stub.outputs["wlr-randr --output HDMI-A-1 --on"] =
-		"failed to apply configuration\n"
-	stub.errs["wlr-randr --output HDMI-A-1 --on"] =
-		errors.New("exit status 1")
-
-	err := controller.Wake()
-
-	if err == nil {
-		t.Fatal("expected an error when the configuration is refused")
-	}
-
-	if !strings.Contains(err.Error(), "wlopm") {
-		t.Fatalf(
-			"expected the error to suggest wlopm, got %v",
-			err,
-		)
-	}
 }

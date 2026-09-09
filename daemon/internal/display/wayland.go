@@ -61,34 +61,34 @@ func NewWaylandController() *WaylandController {
 	}
 }
 
-// Wake re-enables any output that was left disabled before powering the sinks
-// back on. Nothing can power-manage a disabled output, so a screen that the
-// wlr-randr fallback switched off recovers here instead of needing the session
-// restarted.
+// Wake powers the display back on.
+//
+// wlopm is preferred because it restores the display without changing the
+// compositor's output configuration.
+//
+// wlr-randr is only used as a fallback when wlopm is not installed. In that
+// case, an output disabled by the fallback Sleep implementation must be
+// re-enabled before the display can be used again.
 func (c *WaylandController) Wake() error {
 	env, err := c.sessionEnv()
 	if err != nil {
 		return err
 	}
 
-	hasWlopm := c.available("wlopm")
-	hasWlrRandr := c.available("wlr-randr")
+	// Prefer wlopm whenever it is available.
+	//
+	// wlopm powers the sink back on without changing the output configuration,
+	// so there is no reason to invoke wlr-randr first.
+	if c.available("wlopm") {
+		return c.setPowerWithWlopm(env, "on")
+	}
 
-	if !hasWlopm && !hasWlrRandr {
+	// wlr-randr is only the fallback for systems without wlopm.
+	if !c.available("wlr-randr") {
 		return ErrWaylandToolsMissing
 	}
 
-	if hasWlrRandr {
-		if err := c.enableOutputs(env); err != nil {
-			return err
-		}
-	}
-
-	if !hasWlopm {
-		return nil
-	}
-
-	return c.setPowerWithWlopm(env, "on")
+	return c.enableOutputs(env)
 }
 
 func (c *WaylandController) Sleep() error {
@@ -144,8 +144,8 @@ func (c *WaylandController) outputDisableAllowed() bool {
 }
 
 // SetBrightness is not available: neither protocol exposes a brightness or
-// gamma channel. The error is the sentinel the daemon tolerates at startup, so
-// a wayland kiosk boots with the brightness setting simply ignored.
+// gamma channel. The error is the sentinel the daemon tolerates at startup,
+// so a wayland kiosk boots with the brightness setting simply ignored.
 func (c *WaylandController) SetBrightness(level int) error {
 	return fmt.Errorf(
 		"%w: the wayland display mode has no brightness control",
@@ -278,9 +278,9 @@ func (c *WaylandController) applyOutput(
 
 // sessionEnv supplies the two variables the tools need. A system service starts
 // outside the graphical session and inherits neither, but it does run as the
-// user that owns that session: the runtime directory is /run/user/<uid> and the
-// compositor's socket sits inside it. Values already in the environment win, so
-// the env file can still pin them.
+// user that owns that session: the runtime directory is /run/user/<uid> and
+// the compositor's socket sits inside it. Values already in the environment
+// win, so the env file can still pin them.
 func (c *WaylandController) sessionEnv() ([]string, error) {
 	runtimeDir, ok := c.lookupEnv("XDG_RUNTIME_DIR")
 

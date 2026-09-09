@@ -147,9 +147,9 @@ func TestWaylandControllerPrefersWlopmOnSleep(t *testing.T) {
 	assertCommands(t, stub, "wlopm --off *")
 }
 
-// Nothing can power-manage a disabled output, so a screen the fallback switched
-// off has to be re-enabled before wlopm is asked to power it on.
-func TestWaylandControllerReEnablesOutputsBeforePoweringOn(t *testing.T) {
+// wlopm powers the sink back on without touching the output configuration, so
+// waking through it never reads or reconfigures the outputs.
+func TestWaylandControllerWakesWithWlopmAlone(t *testing.T) {
 	controller, stub := newStubbedWaylandController()
 
 	stub.installed["wlopm"] = true
@@ -158,13 +158,7 @@ func TestWaylandControllerReEnablesOutputsBeforePoweringOn(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	assertCommands(
-		t,
-		stub,
-		"wlr-randr",
-		"wlr-randr --output HDMI-A-2 --on --preferred",
-		"wlopm --on *",
-	)
+	assertCommands(t, stub, "wlopm --on *")
 }
 
 func TestWaylandControllerDisablesEnabledOutputsWhenAllowed(t *testing.T) {

@@ -17,13 +17,6 @@ var activeGeometry = regexp.MustCompile(
 	`^[0-9]+x[0-9]+\+[0-9]+\+[0-9]+$`,
 )
 
-// commandRunner runs an external command and returns its combined output.
-// The field exists so tests can drive the controller without an X session.
-type commandRunner func(
-	name string,
-	args ...string,
-) (string, error)
-
 type LinuxController struct {
 	command commandRunner
 }
@@ -248,24 +241,4 @@ func xsetError(output string, err error) error {
 	}
 
 	return err
-}
-
-func runCommand(
-	name string,
-	args ...string,
-) (string, error) {
-	cmd := exec.Command(name, args...)
-
-	output, err := cmd.CombinedOutput()
-
-	if err != nil {
-		return string(output), fmt.Errorf(
-			"command %s failed: %w: %s",
-			name,
-			err,
-			string(output),
-		)
-	}
-
-	return string(output), nil
 }

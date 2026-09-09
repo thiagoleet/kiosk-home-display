@@ -63,8 +63,12 @@ kiosk page that Nginx serves on port `80`.
 session the Pi actually runs. Check it first:
 
 ```sh
-echo "$XDG_SESSION_TYPE"
+loginctl list-sessions
+loginctl show-session <id-on-seat0> -p Type -p Name
 ```
+
+Read the session on `seat0`, not the one you are typing in: over SSH
+`$XDG_SESSION_TYPE` reports `tty` no matter what the console runs.
 
 - `x11` → `DISPLAY_MODE=linux`. Powers the screen with `xset dpms`, and applies
   `DISPLAY_BRIGHTNESS` with `xrandr` as a software gamma adjustment on every
@@ -74,9 +78,13 @@ echo "$XDG_SESSION_TYPE"
 - `wayland` → `DISPLAY_MODE=wayland`. The default on Raspberry Pi OS Bookworm
   and later (labwc, wayfire), where `xset` cannot reach the physical output.
   Powers the screen by disabling and re-enabling the outputs with `wlr-randr`,
-  from the `wlr-randr` package. Needs `XDG_RUNTIME_DIR` and `WAYLAND_DISPLAY`
-  in the env file. There is no brightness control on this path, so the service
-  logs that brightness is unsupported and starts anyway.
+  from the `wlr-randr` package. No env file entries are required: a system
+  service inherits no session variables, so the daemon derives them from the
+  user it runs as — `/run/user/<uid>` for the runtime directory and whichever
+  `wayland-*` socket sits inside it. Set `XDG_RUNTIME_DIR` and
+  `WAYLAND_DISPLAY` only to override that. There is no brightness control on
+  this path, so the service logs that brightness is unsupported and starts
+  anyway.
 - `virtual` → logs the transitions and touches no hardware. The API still
   answers `200`, which makes this the quietest way for a box to look healthy
   while the screen never turns off.
@@ -103,8 +111,16 @@ curl -s -X POST localhost:8080/api/display/sleep
 journalctl -u kiosk-home-display -n 20
 ```
 
-A `[DISPLAY] sleep` line means the service is in `virtual` mode. An error names
-what is missing: the package, or the session variables.
+A `[DISPLAY] sleep` line means the service is in `virtual` mode. Otherwise the
+error names what is missing: the package, the X session, or the compositor
+socket. `no wayland socket in /run/user/<uid>` means the compositor is not
+running as the service user — either the desktop session belongs to another
+user, or the Pi boots to a console with no compositor at all, in which case
+neither real mode can power the screen off. Confirm with:
+
+```sh
+ls /run/user/$(id -u)/wayland-*
+```
 
 ### Schedule and idle timeout
 

@@ -2,6 +2,7 @@ package display
 
 import (
 	"errors"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -19,15 +20,45 @@ HDMI-A-2 "Unknown Unknown (HDMI-A-2)"
   Enabled: no
 `
 
+type waylandCommandStub struct {
+	*commandStub
+
+	env []string
+}
+
+func (s *waylandCommandStub) run(
+	env []string,
+	name string,
+	args ...string,
+) (string, error) {
+	s.env = env
+
+	return s.commandStub.run(name, args...)
+}
+
+// The stub describes a session the way a Pi does: nothing in the environment,
+// a runtime directory named after the service user, one compositor socket.
 func newStubbedWaylandController() (
 	*WaylandController,
-	*commandStub,
+	*waylandCommandStub,
 ) {
-	stub := newCommandStub()
+	stub := &waylandCommandStub{
+		commandStub: newCommandStub(),
+	}
+
 	stub.outputs["wlr-randr"] = wlrRandrOutput
 
 	controller := NewWaylandController()
 	controller.command = stub.run
+	controller.uid = 1000
+	controller.lookupEnv = func(string) (string, bool) {
+		return "", false
+	}
+	controller.sockets = func(directory string) ([]string, error) {
+		return []string{
+			directory + "/wayland-1",
+		}, nil
+	}
 
 	return controller, stub
 }
@@ -98,6 +129,116 @@ func TestWaylandControllerEnablesDisabledOutputOnWake(t *testing.T) {
 	}
 }
 
+// A system service inherits no session variables, so the controller has to
+// derive both from the user it runs as.
+func TestWaylandControllerDerivesTheSessionFromTheServiceUser(t *testing.T) {
+	controller, stub := newStubbedWaylandController()
+
+	if err := controller.Sleep(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := []string{
+		"XDG_RUNTIME_DIR=/run/user/1000",
+		"WAYLAND_DISPLAY=wayland-1",
+	}
+
+	for _, want := range expected {
+		found := false
+
+		for _, entry := range stub.env {
+			if entry == want {
+				found = true
+			}
+		}
+
+		if !found {
+			t.Fatalf(
+				"expected %q in the command environment, got %v",
+				want,
+				stub.env,
+			)
+		}
+	}
+}
+
+func TestWaylandControllerKeepsSessionVariablesFromTheEnvironment(t *testing.T) {
+	controller, stub := newStubbedWaylandController()
+
+	controller.lookupEnv = func(name string) (string, bool) {
+		switch name {
+		case "XDG_RUNTIME_DIR":
+			return "/run/user/1001", true
+
+		case "WAYLAND_DISPLAY":
+			return "wayland-0", true
+		}
+
+		return "", false
+	}
+
+	controller.sockets = func(string) ([]string, error) {
+		t.Fatal("expected no socket lookup when the environment is set")
+
+		return nil, nil
+	}
+
+	if err := controller.Sleep(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := []string{
+		"XDG_RUNTIME_DIR=/run/user/1001",
+		"WAYLAND_DISPLAY=wayland-0",
+	}
+
+	for _, want := range expected {
+		found := false
+
+		for _, entry := range stub.env {
+			if entry == want {
+				found = true
+			}
+		}
+
+		if !found {
+			t.Fatalf(
+				"expected %q in the command environment, got %v",
+				want,
+				stub.env,
+			)
+		}
+	}
+}
+
+func TestWaylandControllerReportsMissingSession(t *testing.T) {
+	controller, stub := newStubbedWaylandController()
+
+	controller.sockets = func(string) ([]string, error) {
+		return nil, nil
+	}
+
+	err := controller.Sleep()
+
+	if err == nil {
+		t.Fatal("expected an error when no socket exists")
+	}
+
+	if !strings.Contains(err.Error(), "/run/user/1000") {
+		t.Fatalf(
+			"expected the error to name the runtime directory, got %v",
+			err,
+		)
+	}
+
+	if len(stub.calls) != 0 {
+		t.Fatalf(
+			"expected no commands, got %v",
+			stub.calls,
+		)
+	}
+}
+
 func TestWaylandControllerReportsMissingWlrRandr(t *testing.T) {
 	controller, stub := newStubbedWaylandController()
 
@@ -133,9 +274,9 @@ func TestWaylandControllerReportsUnreachableCompositor(t *testing.T) {
 		t.Fatal("expected an error when the compositor is unreachable")
 	}
 
-	if !strings.Contains(err.Error(), "WAYLAND_DISPLAY") {
+	if !strings.Contains(err.Error(), "wayland-1") {
 		t.Fatalf(
-			"expected the error to name the missing environment, got %v",
+			"expected the error to name the socket it tried, got %v",
 			err,
 		)
 	}
@@ -154,6 +295,32 @@ func TestWaylandControllerReportsBrightnessUnsupported(t *testing.T) {
 	}
 }
 
+func TestWaylandSocketsSkipsLockFiles(t *testing.T) {
+	directory := t.TempDir()
+
+	for _, name := range []string{
+		"wayland-0",
+		"wayland-0.lock",
+	} {
+		if err := writeEmptyFile(directory + "/" + name); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	}
+
+	sockets, err := waylandSockets(directory)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(sockets) != 1 ||
+		!strings.HasSuffix(sockets[0], "wayland-0") {
+		t.Fatalf(
+			"expected only the socket, got %v",
+			sockets,
+		)
+	}
+}
+
 func TestNewControllerBuildsWaylandController(t *testing.T) {
 	controller, err := NewController("wayland")
 	if err != nil {
@@ -166,4 +333,13 @@ func TestNewControllerBuildsWaylandController(t *testing.T) {
 			controller,
 		)
 	}
+}
+
+func writeEmptyFile(path string) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	return file.Close()
 }

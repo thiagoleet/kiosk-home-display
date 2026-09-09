@@ -1,4 +1,4 @@
-import type { Weather } from "../types/weather";
+import type { Weather, WeatherForecastResponse } from "../types/weather";
 
 const WEATHER_API_URL = "/api/weather";
 
@@ -7,6 +7,16 @@ export async function getWeather(): Promise<Weather> {
 
   if (!response.ok) {
     throw new Error(`Failed to fetch weather: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function getWeatherForecast(): Promise<WeatherForecastResponse[]> {
+  const response = await fetch(`${WEATHER_API_URL}/forecast`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch weather forecast: ${response.status}`);
   }
 
   return response.json();

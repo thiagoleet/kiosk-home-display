@@ -29,5 +29,9 @@
   "weather.condition.thunderstorm": "Thunderstorm",
   "weather.humidity": "Humidity: {{humidity}}%",
   "weather.windSpeed": "Wind Speed: {{windSpeed}} mph",
-  "weather.title": "Weather"
+  "weather.title": "Weather",
+  "forecast.title": "Weather Forecast",
+  "forecast.unavailable": "Weather forecast unavailable",
+  "forecast.min": "Min",
+  "forecast.max": "Max"
 }

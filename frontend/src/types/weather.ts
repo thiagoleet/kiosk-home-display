@@ -1,3 +1,5 @@
+import type { ThemeIconName } from "./theme";
+
 export type WeatherCondition =
   | "clear"
   | "partly_cloudy"
@@ -18,3 +20,17 @@ export type Weather = {
   isDay: boolean;
   timestamp: string;
 };
+
+export type WeatherForecastResponse = {
+  date: string;
+  temperatureMin: number;
+  temperatureMax: number;
+  precipitationProbability: number;
+  condition: WeatherCondition;
+};
+
+export type WeatherForecast = {
+  icon: ThemeIconName;
+  temperatureMin: string;
+  temperatureMax: string;
+} & Omit<WeatherForecastResponse, "temperatureMin" | "temperatureMax">;

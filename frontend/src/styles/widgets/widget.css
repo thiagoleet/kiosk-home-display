@@ -25,3 +25,10 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+
+.forecast-widget__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}

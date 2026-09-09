@@ -23,6 +23,20 @@
   flex-shrink: 0;
   vertical-align: -0.1em;
 }
+
+.forecast-view {
+  overflow: hidden;
+
+}
+
+.forecast-view__content {
+  width: 100%;
+  display: flex;
+  gap: var(--spacing-xl);
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
  
 .activity-view {
   width: 100%;

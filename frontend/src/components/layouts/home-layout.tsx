@@ -5,6 +5,7 @@ import { Particles } from "../effects/particles";
 import { HomeView } from "@/components/views/home-view";
 import { WeatherView } from "@/components/views/weather-view";
 import { ActivityView } from "../views/activity-view";
+import { WeatherForecastViewWidget } from "../view-widgets/weather-forecast-view-widget";
 
 import { useCarousel } from "@/hooks/use-carousel";
 
@@ -19,6 +20,7 @@ export function HomeLayout() {
     () => [
       { id: "home", content: <HomeView /> },
       { id: "weather", content: <WeatherView /> },
+      { id: "weather-forecast", content: <WeatherForecastViewWidget /> },
       { id: "activity", content: <ActivityView /> },
     ],
     [],

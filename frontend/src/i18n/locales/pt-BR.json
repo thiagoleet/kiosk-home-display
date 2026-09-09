@@ -29,5 +29,9 @@
   "weather.condition.thunderstorm": "Tempestade",
   "weather.humidity": "Umidade: {{humidity}}%",
   "weather.windSpeed": "Velocidade do Vento: {{windSpeed}} mph",
-  "weather.title": "Clima"
+  "weather.title": "Clima",
+  "forecast.title": "Previsão do Tempo",
+  "forecast.unavailable": "Previsão do tempo indisponível",
+  "forecast.min": "Min",
+  "forecast.max": "Max"
 }

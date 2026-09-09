@@ -7,10 +7,6 @@
 
   padding-bottom: var(--spacing-md);
 
-  border-bottom:
-    var(--border-width)
-    solid
-    var(--color-border);
 }
 
 .kiosk-name {

@@ -57,15 +57,69 @@ sudo systemctl restart kiosk-home-display
 Keep `HTTP_ALLOWED_ORIGINS=localhost` so the WebSocket endpoint accepts the
 kiosk page that Nginx serves on port `80`.
 
-`DISPLAY_MODE=linux` drives the real display through `xset`. It only works when
-the service user owns the X session, and it needs `DISPLAY` and `XAUTHORITY`
-set in the env file. Install the daemon as the same auto-login user that the
-frontend deployment uses. `DISPLAY_BRIGHTNESS` is applied with `xrandr`, as a
-software gamma adjustment on every connected output, so it works on HDMI
-screens that expose no backlight device. Both tools come from the
-`x11-xserver-utils` package. When `xrandr` is missing or no output is
-connected, the service logs that brightness is unsupported and starts anyway.
-Keep `DISPLAY_MODE=virtual` to run without touching the display hardware.
+### Display mode
+
+`DISPLAY_MODE` decides how the screen is powered, and it has to match the
+session the Pi actually runs. Check it first:
+
+```sh
+echo "$XDG_SESSION_TYPE"
+```
+
+- `x11` → `DISPLAY_MODE=linux`. Powers the screen with `xset dpms`, and applies
+  `DISPLAY_BRIGHTNESS` with `xrandr` as a software gamma adjustment on every
+  connected output, so it works on HDMI screens that expose no backlight
+  device. Both tools come from `x11-xserver-utils`. Needs `DISPLAY` and
+  `XAUTHORITY` in the env file.
+- `wayland` → `DISPLAY_MODE=wayland`. The default on Raspberry Pi OS Bookworm
+  and later (labwc, wayfire), where `xset` cannot reach the physical output.
+  Powers the screen by disabling and re-enabling the outputs with `wlr-randr`,
+  from the `wlr-randr` package. Needs `XDG_RUNTIME_DIR` and `WAYLAND_DISPLAY`
+  in the env file. There is no brightness control on this path, so the service
+  logs that brightness is unsupported and starts anyway.
+- `virtual` → logs the transitions and touches no hardware. The API still
+  answers `200`, which makes this the quietest way for a box to look healthy
+  while the screen never turns off.
+
+Either real mode needs the service user to own the desktop session, so install
+the daemon as the same auto-login user the frontend deployment uses.
+
+The installer never overwrites an existing `/etc/kiosk-home-display/kiosk.env`,
+so a box installed before this setting existed keeps `virtual` across every
+update. It now prints the mode it left in place — check that line after
+deploying.
+
+On X11 the daemon enables DPMS before powering the screen down, and zeroes the
+three DPMS timeouts while doing it. A kiosk session usually disables DPMS to
+stop the screen blanking on its own (`raspi-config` writes `X -s 0 -dpms` for
+that), and in that state `xset dpms force off` exits `0` and leaves the screen
+lit. Zeroed timeouts keep the automatic blanking away, so only this daemon
+powers the screen down.
+
+### Verifying the display actually powers off
+
+```sh
+curl -s -X POST localhost:8080/api/display/sleep
+journalctl -u kiosk-home-display -n 20
+```
+
+A `[DISPLAY] sleep` line means the service is in `virtual` mode. An error names
+what is missing: the package, or the session variables.
+
+### Schedule and idle timeout
+
+The scheduler applies the window the current time already sits in when the
+service starts, so restarting during the off window — which every deploy after
+`SCHEDULE_OFF` is — turns the display off right away instead of waiting for the
+next `SCHEDULE_ON`. It also settles the display on any later tick, so a boundary
+minute missed by a busy process, or skipped by the clock jump a Pi without an
+RTC makes when NTP lands, no longer strands the screen in the wrong state.
+
+The idle timeout keeps watching after it fires, and every wake restarts its
+countdown. Nothing reports user activity yet, so with `IDLE_ENABLED=true` the
+display stays on for `IDLE_TIMEOUT` after each wake and then sleeps again —
+including the wake at `SCHEDULE_ON`. Set `IDLE_ENABLED=false` to keep the screen
+on for the whole on window.
 
 The SQLite database lives at `/var/lib/kiosk-home-display/data/kiosk.db`,
 because the daemon resolves it relative to the working directory.

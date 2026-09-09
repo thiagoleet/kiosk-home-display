@@ -48,6 +48,19 @@ sudo install -d -m 755 -o "$service_user" -g "$service_group" "$data_dir/data"
 
 if [ -f "$env_file" ]; then
   echo "Keeping the existing $env_file."
+  # An env file from an earlier install survives every update, so a box can sit
+  # on DISPLAY_MODE=virtual for good: the API answers 200 and logs the
+  # transition while the screen never powers down. Report what is in effect.
+  installed_mode=$(sudo sed -n 's/^DISPLAY_MODE=//p' "$env_file" | tail -n 1)
+  installed_mode=${installed_mode:-virtual (unset)}
+  echo "  DISPLAY_MODE=$installed_mode"
+  case "$installed_mode" in
+    linux | wayland) ;;
+    *)
+      echo "  Warning: this mode never touches the display hardware." >&2
+      echo "  Set DISPLAY_MODE=linux (X11) or wayland (labwc/wayfire) to power the screen off." >&2
+      ;;
+  esac
 else
   sudo install -m 640 -o root -g "$service_group" \
     "$script_dir/kiosk.env.example" \

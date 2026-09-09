@@ -3,6 +3,7 @@ package display
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -34,25 +35,75 @@ func NewLinuxController() *LinuxController {
 }
 
 func (c *LinuxController) Wake() error {
-	_, err := c.command(
+	output, err := c.command(
 		"xset",
 		"dpms",
 		"force",
 		"on",
 	)
 
-	return err
+	if err != nil {
+		return xsetError(output, err)
+	}
+
+	return nil
 }
 
+// Sleep powers the screen down through DPMS. It enables DPMS first, because a
+// kiosk session usually turns it off to stop the screen blanking on its own —
+// raspi-config writes "X -s 0 -dpms" for exactly that. With DPMS disabled,
+// "xset dpms force off" is a silent no-op: it exits 0 and the screen stays lit.
 func (c *LinuxController) Sleep() error {
-	_, err := c.command(
+	if err := c.enableDPMS(); err != nil {
+		return err
+	}
+
+	output, err := c.command(
 		"xset",
 		"dpms",
 		"force",
 		"off",
 	)
 
-	return err
+	if err != nil {
+		return xsetError(output, err)
+	}
+
+	return nil
+}
+
+// enableDPMS turns the DPMS extension on when the X server reports it off, and
+// zeroes its three timeouts. The timeouts are what the kiosk session wanted
+// gone: with them at zero the screen only ever powers down when this daemon
+// asks it to, so enabling DPMS does not bring blanking back.
+func (c *LinuxController) enableDPMS() error {
+	output, err := c.command("xset", "q")
+	if err != nil {
+		return xsetError(output, err)
+	}
+
+	if !strings.Contains(output, "DPMS is Disabled") {
+		return nil
+	}
+
+	log.Println(
+		"[DISPLAY] DPMS is disabled, enabling it so the screen can power down",
+	)
+
+	for _, args := range [][]string{
+		{"+dpms"},
+		{"dpms", "0", "0", "0"},
+	} {
+		output, err := c.command("xset", args...)
+		if err != nil {
+			return fmt.Errorf(
+				"enable dpms: %w",
+				xsetError(output, err),
+			)
+		}
+	}
+
+	return nil
 }
 
 // SetBrightness dims every connected output through xrandr. It is a software
@@ -176,6 +227,27 @@ func hasActiveMode(fields []string) bool {
 	}
 
 	return false
+}
+
+// xsetError names the two ways xset fails on a kiosk: the package is missing,
+// or the daemon has no X session to talk to. Both look like a plain exit status
+// in the journal otherwise, which is the hardest part of the problem to spot.
+func xsetError(output string, err error) error {
+	if errors.Is(err, exec.ErrNotFound) {
+		return fmt.Errorf(
+			"xset is not installed, install x11-xserver-utils: %w",
+			err,
+		)
+	}
+
+	if strings.Contains(output, "unable to open display") {
+		return fmt.Errorf(
+			"xset cannot reach the X session, check DISPLAY and XAUTHORITY: %w",
+			err,
+		)
+	}
+
+	return err
 }
 
 func runCommand(

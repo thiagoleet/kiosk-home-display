@@ -102,7 +102,11 @@ func (c Config) Validate() error {
 		)
 	}
 
-	if c.Display.Mode != "virtual" && c.Display.Mode != "linux" {
+	switch c.Display.Mode {
+	case "virtual", "linux", "wayland":
+		// Supported.
+
+	default:
 		return fmt.Errorf(
 			"invalid display mode: %q",
 			c.Display.Mode,
@@ -192,6 +196,23 @@ func (c Config) Validate() error {
 				c.Scheduler.Timezone,
 				err,
 			)
+		}
+
+		// The scheduler compares these against the clock as minutes since
+		// midnight. A malformed value would leave it unable to tell which side
+		// of the schedule the current time is on, so it is rejected here rather
+		// than silently disabling the schedule.
+		for name, value := range map[string]string{
+			"schedule on time":  c.Scheduler.On,
+			"schedule off time": c.Scheduler.Off,
+		} {
+			if _, err := time.Parse("15:04", value); err != nil {
+				return fmt.Errorf(
+					"invalid %s %q, want HH:MM",
+					name,
+					value,
+				)
+			}
 		}
 	}
 

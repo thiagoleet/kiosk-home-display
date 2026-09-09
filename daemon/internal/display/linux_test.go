@@ -205,6 +205,7 @@ func TestLinuxControllerWakesAndSleepsWithXset(t *testing.T) {
 
 	expected := []string{
 		"xset dpms force on",
+		"xset q",
 		"xset dpms force off",
 	}
 
@@ -223,5 +224,116 @@ func TestLinuxControllerWakesAndSleepsWithXset(t *testing.T) {
 				got,
 			)
 		}
+	}
+}
+
+func TestLinuxControllerEnablesDPMSBeforeSleeping(t *testing.T) {
+	controller, stub := newStubbedLinuxController()
+
+	stub.outputs["xset q"] = `DPMS (Energy Star):
+  Standby: 600    Suspend: 600    Off: 600
+  DPMS is Disabled
+  Monitor is On
+`
+
+	if err := controller.Sleep(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := []string{
+		"xset q",
+		"xset +dpms",
+		"xset dpms 0 0 0",
+		"xset dpms force off",
+	}
+
+	if len(stub.calls) != len(expected) {
+		t.Fatalf(
+			"expected %d commands, got %v",
+			len(expected),
+			stub.calls,
+		)
+	}
+
+	for index, want := range expected {
+		call := stub.calls[index]
+
+		got := strings.Join(
+			append([]string{call.name}, call.args...),
+			" ",
+		)
+
+		if got != want {
+			t.Fatalf(
+				"expected command %q, got %q",
+				want,
+				got,
+			)
+		}
+	}
+}
+
+func TestLinuxControllerKeepsDPMSSettingsWhenEnabled(t *testing.T) {
+	controller, stub := newStubbedLinuxController()
+
+	stub.outputs["xset q"] = `DPMS (Energy Star):
+  Standby: 0    Suspend: 0    Off: 0
+  DPMS is Enabled
+  Monitor is On
+`
+
+	if err := controller.Sleep(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, call := range stub.calls {
+		if len(call.args) == 1 && call.args[0] == "+dpms" {
+			t.Fatalf(
+				"expected no dpms change, got %v",
+				stub.calls,
+			)
+		}
+	}
+}
+
+func TestLinuxControllerReportsMissingXset(t *testing.T) {
+	controller, stub := newStubbedLinuxController()
+
+	stub.errs["xset q"] = &exec.Error{
+		Name: "xset",
+		Err:  exec.ErrNotFound,
+	}
+
+	err := controller.Sleep()
+
+	if err == nil {
+		t.Fatal("expected an error when xset is missing")
+	}
+
+	if !strings.Contains(err.Error(), "x11-xserver-utils") {
+		t.Fatalf(
+			"expected the error to name the package, got %v",
+			err,
+		)
+	}
+}
+
+func TestLinuxControllerReportsUnreachableXSession(t *testing.T) {
+	controller, stub := newStubbedLinuxController()
+
+	stub.outputs["xset q"] = "xset:  unable to open display \"\"\n"
+	stub.errs["xset q"] = errors.New("exit status 1")
+
+	err := controller.Sleep()
+
+	if err == nil {
+		t.Fatal("expected an error when the X session is unreachable")
+	}
+
+	if !strings.Contains(err.Error(), "XAUTHORITY") {
+		t.Fatalf(
+			"expected the error to name the missing environment, got %v",
+			err,
+		)
 	}
 }

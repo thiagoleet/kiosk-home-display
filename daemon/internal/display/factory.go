@@ -10,6 +10,9 @@ func NewController(mode string) (Controller, error) {
 	case "linux":
 		return NewLinuxController(), nil
 
+	case "wayland":
+		return NewWaylandController(), nil
+
 	default:
 		return nil, fmt.Errorf(
 			"unknown display mode: %s",

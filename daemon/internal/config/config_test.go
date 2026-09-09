@@ -295,3 +295,29 @@ func TestLoadRejectsZeroWeatherCacheTTL(t *testing.T) {
 		t.Fatal("expected configuration error")
 	}
 }
+
+func TestLoadAcceptsWaylandDisplayMode(t *testing.T) {
+	t.Setenv("DISPLAY_MODE", "wayland")
+
+	config, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if config.Display.Mode != "wayland" {
+		t.Fatalf(
+			"expected display mode wayland, got %q",
+			config.Display.Mode,
+		)
+	}
+}
+
+func TestLoadRejectsMalformedScheduleTime(t *testing.T) {
+	t.Setenv("SCHEDULE_OFF", "11pm")
+
+	_, err := Load()
+
+	if err == nil {
+		t.Fatal("expected configuration error")
+	}
+}

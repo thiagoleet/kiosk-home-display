@@ -263,6 +263,25 @@ func (a *App) registerHandlers() {
 		},
 	)
 
+	// Every wake restarts the idle countdown. Without this a display that a
+	// notification or the morning schedule turned on inherits whatever was left
+	// of the running countdown, and sleeps again moments later.
+	a.bus.Subscribe(
+		events.EventDisplayStateChanged,
+		func(event events.Event) {
+			snapshot, ok := event.Data.(display.Snapshot)
+			if !ok {
+				return
+			}
+
+			if snapshot.Power != display.StateOn {
+				return
+			}
+
+			a.idle.Activity()
+		},
+	)
+
 	a.bus.Subscribe(
 		events.EventScheduleOn,
 		func(event events.Event) {

@@ -1,3 +1,4 @@
+import { Particles } from "../effects/particles";
 import { ClockViewWidget } from "../view-widgets/clock-view-widget";
 import { GreetingViewWidget } from "../view-widgets/greeting-view-widget";
 import { WeatherViewWidget } from "../view-widgets/weather-view-widget";
@@ -12,6 +13,8 @@ export function ScreenSaverLayout() {
           <WeatherViewWidget />
         </div>
       </div>
+
+      <Particles />
     </section>
   );
 }

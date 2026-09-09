@@ -1,4 +1,4 @@
-.PHONY: test test-verbose coverage race build build-pi run
+.PHONY: test test-verbose coverage race build build-pi run deploy-frontend
 
 test:
 	cd daemon && gotestsum ./...
@@ -21,3 +21,7 @@ build-pi:
 
 run:
 	cd daemon && go run ./cmd/kiosk
+
+deploy-frontend:
+	cd frontend && pnpm build
+	./deploy/frontend/install.sh

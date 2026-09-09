@@ -72,6 +72,20 @@ func TestDefaultConfig(t *testing.T) {
 		)
 	}
 
+	if config.Printer.Mode != "virtual" {
+		t.Fatalf(
+			"expected virtual printer mode, got %q",
+			config.Printer.Mode,
+		)
+	}
+
+	if config.Printer.PollInterval != 5*time.Second {
+		t.Fatalf(
+			"expected a 5s printer poll interval, got %s",
+			config.Printer.PollInterval,
+		)
+	}
+
 	if config.Weather.Enabled {
 		t.Fatal("expected weather to be disabled")
 	}
@@ -118,6 +132,8 @@ func TestLoadOverridesDefaults(t *testing.T) {
 	t.Setenv("SCHEDULE_OFF", "22:00")
 	t.Setenv("TIMEZONE", "America/New_York")
 	t.Setenv("ACTIVITY_LIFE_SPAN", "48h")
+	t.Setenv("PRINTER_MODE", "cups")
+	t.Setenv("PRINTER_POLL_INTERVAL", "2s")
 	t.Setenv("WEATHER_ENABLED", "true")
 	t.Setenv("OPEN_METEO_API_URL", "https://weather.example.com/forecast")
 	t.Setenv("WEATHER_LATITUDE", "40.7128")
@@ -206,6 +222,20 @@ func TestLoadOverridesDefaults(t *testing.T) {
 		)
 	}
 
+	if config.Printer.Mode != "cups" {
+		t.Fatalf(
+			"expected cups printer mode, got %q",
+			config.Printer.Mode,
+		)
+	}
+
+	if config.Printer.PollInterval != 2*time.Second {
+		t.Fatalf(
+			"expected a 2s printer poll interval, got %s",
+			config.Printer.PollInterval,
+		)
+	}
+
 	if config.Weather.Timezone != "America/New_York" {
 		t.Fatalf(
 			"expected weather timezone America/New_York, got %q",
@@ -225,6 +255,27 @@ func TestLoadOverridesDefaults(t *testing.T) {
 			"expected 7 forecast days, got %d",
 			config.Weather.ForecastDays,
 		)
+	}
+}
+
+func TestLoadRejectsInvalidPrinterMode(t *testing.T) {
+	t.Setenv("PRINTER_MODE", "invalid")
+
+	_, err := Load()
+
+	if err == nil {
+		t.Fatal("expected configuration error")
+	}
+}
+
+func TestLoadRejectsANonPositivePrinterPollInterval(t *testing.T) {
+	t.Setenv("PRINTER_MODE", "cups")
+	t.Setenv("PRINTER_POLL_INTERVAL", "0s")
+
+	_, err := Load()
+
+	if err == nil {
+		t.Fatal("expected configuration error")
 	}
 }
 

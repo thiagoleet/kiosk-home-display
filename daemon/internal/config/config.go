@@ -14,6 +14,7 @@ type Config struct {
 	Idle      IdleConfig
 	Scheduler SchedulerConfig
 	Activity  ActivityConfig
+	Printer   PrinterConfig
 	Weather   WeatherConfig
 }
 
@@ -45,6 +46,14 @@ type SchedulerConfig struct {
 
 type ActivityConfig struct {
 	LifeSpan time.Duration
+}
+
+// Mode selects where print jobs come from: "cups" watches the real queue on
+// the host, "virtual" watches nothing and leaves the simulated job endpoint in
+// place for development.
+type PrinterConfig struct {
+	Mode         string
+	PollInterval time.Duration
 }
 
 type WeatherConfig struct {
@@ -84,6 +93,10 @@ func Default() Config {
 		},
 		Activity: ActivityConfig{
 			LifeSpan: 7 * 24 * time.Hour,
+		},
+		Printer: PrinterConfig{
+			Mode:         "virtual",
+			PollInterval: 5 * time.Second,
 		},
 		Weather: WeatherConfig{
 			Enabled:         false,
@@ -140,6 +153,23 @@ func (c Config) Validate() error {
 	if c.Activity.LifeSpan <= 0 {
 		return fmt.Errorf(
 			"activity life span must be greater than zero",
+		)
+	}
+
+	switch c.Printer.Mode {
+	case "virtual", "cups":
+		// Supported.
+
+	default:
+		return fmt.Errorf(
+			"invalid printer mode: %q",
+			c.Printer.Mode,
+		)
+	}
+
+	if c.Printer.Mode == "cups" && c.Printer.PollInterval <= 0 {
+		return fmt.Errorf(
+			"printer poll interval must be greater than zero",
 		)
 	}
 
@@ -349,6 +379,22 @@ func Load() (Config, error) {
 		}
 
 		config.Activity.LifeSpan = lifeSpan
+	}
+
+	if value := os.Getenv("PRINTER_MODE"); value != "" {
+		config.Printer.Mode = value
+	}
+
+	if value := os.Getenv("PRINTER_POLL_INTERVAL"); value != "" {
+		pollInterval, err := time.ParseDuration(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid PRINTER_POLL_INTERVAL: %w",
+				err,
+			)
+		}
+
+		config.Printer.PollInterval = pollInterval
 	}
 
 	if value := os.Getenv("WEATHER_ENABLED"); value != "" {

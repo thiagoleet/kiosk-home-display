@@ -32,6 +32,7 @@ type App struct {
 	display      *display.Manager
 	scheduler    *scheduler.Scheduler
 	printer      *printer.Manager
+	printerMon   *printer.Monitor
 	notification *notification.Manager
 	activity     *activity.Manager
 	websocket    *websocket.Server
@@ -145,6 +146,18 @@ func New(cfg config.Config) (*App, error) {
 		bus,
 	)
 
+	// A virtual printer has no queue to watch, so no monitor is created and the
+	// simulated job endpoint stays available for development.
+	var printerMonitor *printer.Monitor
+
+	if cfg.Printer.Mode == "cups" {
+		printerMonitor = printer.NewMonitor(
+			printerManager,
+			printer.NewCUPSSource(),
+			cfg.Printer.PollInterval,
+		)
+	}
+
 	notificationManager := notification.NewManager(
 		bus,
 		texts,
@@ -204,6 +217,7 @@ func New(cfg config.Config) (*App, error) {
 		display:      displayManager,
 		scheduler:    schedulerManager,
 		printer:      printerManager,
+		printerMon:   printerMonitor,
 		notification: notificationManager,
 		activity:     activityManager,
 
@@ -225,6 +239,15 @@ func (a *App) Run(ctx context.Context) error {
 
 	if a.config.Scheduler.Enabled {
 		a.scheduler.Start()
+	}
+
+	if a.printerMon != nil {
+		log.Printf(
+			"[APP] watching the CUPS queue every %s",
+			a.config.Printer.PollInterval,
+		)
+
+		a.printerMon.Start()
 	}
 
 	go func() {
@@ -349,6 +372,10 @@ func (a *App) Stop() error {
 			"failed to stop HTTP server: %v",
 			err,
 		)
+	}
+
+	if a.printerMon != nil {
+		a.printerMon.Stop()
 	}
 
 	if a.config.Scheduler.Enabled {

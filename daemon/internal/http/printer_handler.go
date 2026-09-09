@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	nethttp "net/http"
 
 	"github.com/thiagoleet/kiosk-home-display/internal/printer"
@@ -59,7 +60,7 @@ func (h *PrinterHandler) Print(
 		nethttp.Error(
 			w,
 			err.Error(),
-			nethttp.StatusConflict,
+			printErrorStatus(err),
 		)
 
 		return
@@ -70,4 +71,22 @@ func (h *PrinterHandler) Print(
 		nethttp.StatusAccepted,
 		job,
 	)
+}
+
+// printErrorStatus separates a caller that asked for something impossible from
+// a printer that cannot take the job right now.
+func printErrorStatus(err error) int {
+	switch {
+	case errors.Is(err, printer.ErrInvalidJobName):
+		return nethttp.StatusBadRequest
+
+	case errors.Is(err, printer.ErrMonitored):
+		return nethttp.StatusConflict
+
+	case errors.Is(err, printer.ErrBusy):
+		return nethttp.StatusConflict
+
+	default:
+		return nethttp.StatusInternalServerError
+	}
 }

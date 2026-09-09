@@ -173,6 +173,7 @@ func New(cfg config.Config) (*App, error) {
 			Longitude: cfg.Weather.Longitude,
 			Timezone:  cfg.Weather.Timezone,
 		},
+		cfg.Weather.ForecastDays,
 	)
 
 	websocketServer := websocket.NewServer(

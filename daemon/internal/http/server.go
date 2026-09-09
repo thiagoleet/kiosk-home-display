@@ -104,6 +104,11 @@ func NewServer(
 	)
 
 	mux.HandleFunc(
+		"/api/weather/forecast",
+		weatherHandler.Forecast,
+	)
+
+	mux.HandleFunc(
 		"/api/system/refresh",
 		systemHandler.Refresh,
 	)

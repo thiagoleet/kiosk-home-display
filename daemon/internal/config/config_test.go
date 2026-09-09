@@ -96,6 +96,13 @@ func TestDefaultConfig(t *testing.T) {
 			config.Weather.CacheTTL,
 		)
 	}
+
+	if config.Weather.ForecastDays != 5 {
+		t.Fatalf(
+			"expected 5 forecast days, got %d",
+			config.Weather.ForecastDays,
+		)
+	}
 }
 
 func TestLoadOverridesDefaults(t *testing.T) {
@@ -117,6 +124,7 @@ func TestLoadOverridesDefaults(t *testing.T) {
 	t.Setenv("WEATHER_LONGITUDE", "-74.0060")
 	t.Setenv("WEATHER_TIMEZONE", "America/New_York")
 	t.Setenv("WEATHER_CACHE_TTL", "10m")
+	t.Setenv("WEATHER_FORECAST_DAYS", "7")
 
 	config, err := Load()
 	if err != nil {
@@ -209,6 +217,13 @@ func TestLoadOverridesDefaults(t *testing.T) {
 		t.Fatalf(
 			"expected weather cache ttl 10m, got %s",
 			config.Weather.CacheTTL,
+		)
+	}
+
+	if config.Weather.ForecastDays != 7 {
+		t.Fatalf(
+			"expected 7 forecast days, got %d",
+			config.Weather.ForecastDays,
 		)
 	}
 }

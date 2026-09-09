@@ -26,9 +26,21 @@ type CurrentWeather struct {
 	Timestamp           time.Time        `json:"timestamp"`
 }
 
+// DailyForecast is one day of the outlook. Date is midnight in the
+// configured timezone, so the frontend can label the day without
+// converting anything.
+type DailyForecast struct {
+	Date                     time.Time        `json:"date"`
+	TemperatureMin           float64          `json:"temperatureMin"`
+	TemperatureMax           float64          `json:"temperatureMax"`
+	PrecipitationProbability float64          `json:"precipitationProbability"`
+	Condition                WeatherCondition `json:"condition"`
+}
+
 type Weather struct {
-	Latitude  float64        `json:"latitude"`
-	Longitude float64        `json:"longitude"`
-	Timezone  string         `json:"timezone"`
-	Current   CurrentWeather `json:"current"`
+	Latitude  float64         `json:"latitude"`
+	Longitude float64         `json:"longitude"`
+	Timezone  string          `json:"timezone"`
+	Current   CurrentWeather  `json:"current"`
+	Daily     []DailyForecast `json:"daily"`
 }

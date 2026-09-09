@@ -9,4 +9,12 @@ type Provider interface {
 		longitude float64,
 		timezone string,
 	) (CurrentWeather, error)
+
+	GetForecast(
+		ctx context.Context,
+		latitude float64,
+		longitude float64,
+		timezone string,
+		days int,
+	) ([]DailyForecast, error)
 }

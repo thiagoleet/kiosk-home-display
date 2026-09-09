@@ -1,7 +1,6 @@
 package http
 
 import (
-	"encoding/json"
 	"errors"
 	nethttp "net/http"
 
@@ -28,35 +27,56 @@ func (h *WeatherHandler) Current(
 		r.Context(),
 	)
 	if err != nil {
-		if errors.Is(err, weather.ErrDisabled) {
-			nethttp.Error(
-				w,
-				"Weather Forecast is not enabled for this device",
-				nethttp.StatusServiceUnavailable,
-			)
+		writeWeatherError(w, err)
 
-			return
-		}
+		return
+	}
 
+	writeJSON(
+		w,
+		nethttp.StatusOK,
+		currentWeather,
+	)
+}
+
+// Forecast serves the daily outlook, today first.
+func (h *WeatherHandler) Forecast(
+	w nethttp.ResponseWriter,
+	r *nethttp.Request,
+) {
+	forecast, err := h.service.GetForecast(
+		r.Context(),
+	)
+	if err != nil {
+		writeWeatherError(w, err)
+
+		return
+	}
+
+	writeJSON(
+		w,
+		nethttp.StatusOK,
+		forecast,
+	)
+}
+
+func writeWeatherError(
+	w nethttp.ResponseWriter,
+	err error,
+) {
+	if errors.Is(err, weather.ErrDisabled) {
 		nethttp.Error(
 			w,
-			"failed to get weather",
-			nethttp.StatusBadGateway,
+			"Weather Forecast is not enabled for this device",
+			nethttp.StatusServiceUnavailable,
 		)
 
 		return
 	}
 
-	w.Header().Set(
-		"Content-Type",
-		"application/json",
+	nethttp.Error(
+		w,
+		"failed to get weather",
+		nethttp.StatusBadGateway,
 	)
-
-	w.WriteHeader(nethttp.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(
-		currentWeather,
-	); err != nil {
-		return
-	}
 }

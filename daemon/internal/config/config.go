@@ -54,6 +54,7 @@ type WeatherConfig struct {
 	Longitude       float64
 	Timezone        string
 	CacheTTL        time.Duration
+	ForecastDays    int
 }
 
 func Default() Config {
@@ -91,6 +92,7 @@ func Default() Config {
 			Longitude:       -46.633308,
 			Timezone:        "America/Sao_Paulo",
 			CacheTTL:        5 * time.Minute,
+			ForecastDays:    5,
 		},
 	}
 }
@@ -177,6 +179,12 @@ func (c Config) Validate() error {
 		if c.Weather.CacheTTL <= 0 {
 			return fmt.Errorf(
 				"weather cache ttl must be greater than zero",
+			)
+		}
+
+		if c.Weather.ForecastDays < 1 || c.Weather.ForecastDays > 16 {
+			return fmt.Errorf(
+				"weather forecast days must be between 1 and 16",
 			)
 		}
 	}
@@ -397,6 +405,18 @@ func Load() (Config, error) {
 		}
 
 		config.Weather.CacheTTL = cacheTTL
+	}
+
+	if value := os.Getenv("WEATHER_FORECAST_DAYS"); value != "" {
+		forecastDays, err := strconv.Atoi(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid WEATHER_FORECAST_DAYS: %w",
+				err,
+			)
+		}
+
+		config.Weather.ForecastDays = forecastDays
 	}
 
 	if err := config.Validate(); err != nil {

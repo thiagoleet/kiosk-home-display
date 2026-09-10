@@ -1,7 +1,6 @@
 package printer
 
 import (
-	"log"
 	"sync"
 	"time"
 )
@@ -21,10 +20,10 @@ type Monitor struct {
 	done     chan struct{}
 	stopOnce sync.Once
 
-	// lastErr keeps a queue that cannot be read from filling the journal with
+	// pollLog keeps a queue that cannot be read from filling the journal with
 	// one identical line per interval. Only the poll goroutine touches it, and
 	// Start polls before that goroutine exists, so the two never overlap.
-	lastErr string
+	pollLog changeLogger
 }
 
 func NewMonitor(
@@ -46,7 +45,8 @@ func NewMonitor(
 }
 
 // Start reads the queue once before the ticker takes over, so the jobs already
-// waiting at boot become the baseline instead of arriving as notifications.
+// waiting at boot, and the ones already in the history behind them, become the
+// baseline instead of arriving as notifications.
 func (m *Monitor) Start() {
 	m.poll()
 
@@ -79,41 +79,19 @@ func (m *Monitor) run() {
 }
 
 func (m *Monitor) poll() {
-	jobs, err := m.source.ActiveJobs()
+	queue, err := m.source.Queue()
 	if err != nil {
-		m.reportError(err)
+		m.pollLog.Failed(
+			"[PRINTER] cannot read the print queue: %v",
+			err,
+		)
 
 		return
 	}
 
-	m.clearError()
-
-	m.manager.Sync(jobs)
-}
-
-// reportError logs a failing poll once, and again only when the failure
-// changes. A stopped cupsd is otherwise reported every interval forever.
-func (m *Monitor) reportError(err error) {
-	message := err.Error()
-
-	if message == m.lastErr {
-		return
-	}
-
-	m.lastErr = message
-
-	log.Printf(
-		"[PRINTER] cannot read the print queue: %v",
-		err,
+	m.pollLog.Recovered(
+		"[PRINTER] print queue readable again",
 	)
-}
 
-func (m *Monitor) clearError() {
-	if m.lastErr == "" {
-		return
-	}
-
-	m.lastErr = ""
-
-	log.Println("[PRINTER] print queue readable again")
+	m.manager.Sync(queue)
 }

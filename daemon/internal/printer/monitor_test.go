@@ -14,21 +14,21 @@ import (
 // wait for the loop instead of sleeping for it.
 type stubSource struct {
 	mu     sync.Mutex
-	queues [][]PrintJob
+	queues []Queue
 	calls  int
 	err    error
 
 	polled chan struct{}
 }
 
-func newStubSource(queues ...[]PrintJob) *stubSource {
+func newStubSource(queues ...Queue) *stubSource {
 	return &stubSource{
 		queues: queues,
 		polled: make(chan struct{}, 64),
 	}
 }
 
-func (s *stubSource) ActiveJobs() ([]PrintJob, error) {
+func (s *stubSource) Queue() (Queue, error) {
 	s.mu.Lock()
 
 	index := s.calls
@@ -37,14 +37,14 @@ func (s *stubSource) ActiveJobs() ([]PrintJob, error) {
 
 	err := s.err
 
-	var jobs []PrintJob
+	var queue Queue
 
 	if len(s.queues) > 0 {
 		if index >= len(s.queues) {
 			index = len(s.queues) - 1
 		}
 
-		jobs = s.queues[index]
+		queue = s.queues[index]
 	}
 
 	s.mu.Unlock()
@@ -56,10 +56,10 @@ func (s *stubSource) ActiveJobs() ([]PrintJob, error) {
 	}
 
 	if err != nil {
-		return nil, err
+		return Queue{}, err
 	}
 
-	return jobs, nil
+	return queue, nil
 }
 
 func (s *stubSource) waitForPolls(
@@ -86,14 +86,14 @@ func TestMonitorPublishesQueueChanges(t *testing.T) {
 	manager, recorded := newRecordedManager()
 
 	source := newStubSource(
-		[]PrintJob{job("printer-1", "report.pdf")},
-		[]PrintJob{job("printer-1", "report.pdf")},
-		[]PrintJob{
+		active(job("printer-1", "report.pdf")),
+		active(job("printer-1", "report.pdf")),
+		active(
 			job("printer-1", "report.pdf"),
 			job("printer-2", "list.txt"),
-		},
-		[]PrintJob{job("printer-2", "list.txt")},
-		nil,
+		),
+		active(job("printer-2", "list.txt")),
+		Queue{},
 	)
 
 	monitor := NewMonitor(
@@ -161,7 +161,7 @@ func TestMonitorIgnoresAFailingQueue(t *testing.T) {
 	manager, recorded := newRecordedManager()
 
 	source := newStubSource(
-		[]PrintJob{job("printer-1", "report.pdf")},
+		active(job("printer-1", "report.pdf")),
 	)
 
 	monitor := NewMonitor(
@@ -196,7 +196,7 @@ func TestMonitorIgnoresAFailingQueue(t *testing.T) {
 func TestMonitorStopEndsTheLoop(t *testing.T) {
 	manager, _ := newRecordedManager()
 
-	source := newStubSource(nil)
+	source := newStubSource(Queue{})
 
 	monitor := NewMonitor(
 		manager,
@@ -224,5 +224,71 @@ func TestMonitorStopEndsTheLoop(t *testing.T) {
 			before,
 			after,
 		)
+	}
+}
+
+// End to end through the poll loop: a job that never appears in the queue is
+// still reported, from the history it leaves behind.
+func TestMonitorPublishesAJobThatOnlyReachesTheHistory(t *testing.T) {
+	manager, recorded := newRecordedManager()
+
+	source := newStubSource(
+		Queue{
+			Completed: []PrintJob{job("printer-30", "old.pdf")},
+		},
+		Queue{
+			Completed: []PrintJob{
+				job("printer-31", "receipt.pdf"),
+				job("printer-30", "old.pdf"),
+			},
+		},
+	)
+
+	monitor := NewMonitor(
+		manager,
+		source,
+		5*time.Millisecond,
+	)
+
+	monitor.Start()
+
+	source.waitForPolls(t, 2)
+
+	monitor.Stop()
+
+	expected := []recordedEvent{
+		{
+			eventType: events.EventPrinterStarted,
+			data: events.PrinterEvent{
+				JobID: "printer-31",
+				Name:  "receipt.pdf",
+			},
+		},
+		{
+			eventType: events.EventPrinterCompleted,
+			data: events.PrinterEvent{
+				JobID: "printer-31",
+				Name:  "receipt.pdf",
+			},
+		},
+	}
+
+	if len(*recorded) != len(expected) {
+		t.Fatalf(
+			"expected %d events, got %+v",
+			len(expected),
+			*recorded,
+		)
+	}
+
+	for index, event := range expected {
+		if (*recorded)[index] != event {
+			t.Errorf(
+				"event %d: expected %+v, got %+v",
+				index,
+				event,
+				(*recorded)[index],
+			)
+		}
 	}
 }

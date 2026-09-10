@@ -2,6 +2,7 @@ package printer
 
 import (
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
@@ -36,8 +37,21 @@ func newRecordedManager() (*Manager, *[]recordedEvent) {
 	return NewManager(bus), recorded
 }
 
+// job builds a job the way a source would, taking the trailing number of the
+// identifier as the job number, which is how CUPS identifiers are shaped.
 func job(id string, name string) PrintJob {
-	return PrintJob{ID: id, Name: name}
+	number := 0
+
+	if matches := queuedJob.FindStringSubmatch(id); matches != nil {
+		number, _ = strconv.Atoi(matches[2])
+	}
+
+	return PrintJob{ID: id, Name: name, Number: number}
+}
+
+// active is the common case: a queue with nothing finished behind it.
+func active(jobs ...PrintJob) Queue {
+	return Queue{Active: jobs}
 }
 
 // The first read of the queue is a baseline. Without this, a job stuck in the
@@ -45,7 +59,7 @@ func job(id string, name string) PrintJob {
 func TestManagerSyncAdoptsTheFirstQueueSilently(t *testing.T) {
 	manager, recorded := newRecordedManager()
 
-	manager.Sync([]PrintJob{job("printer-1", "report.pdf")})
+	manager.Sync(active(job("printer-1", "report.pdf")))
 
 	if len(*recorded) != 0 {
 		t.Fatalf(
@@ -65,8 +79,8 @@ func TestManagerSyncAdoptsTheFirstQueueSilently(t *testing.T) {
 func TestManagerSyncPublishesStartedAndCompleted(t *testing.T) {
 	manager, recorded := newRecordedManager()
 
-	manager.Sync(nil)
-	manager.Sync([]PrintJob{job("printer-1", "report.pdf")})
+	manager.Sync(Queue{})
+	manager.Sync(active(job("printer-1", "report.pdf")))
 
 	if len(*recorded) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(*recorded))
@@ -95,7 +109,7 @@ func TestManagerSyncPublishesStartedAndCompleted(t *testing.T) {
 		)
 	}
 
-	manager.Sync(nil)
+	manager.Sync(Queue{})
 
 	if len(*recorded) != 2 {
 		t.Fatalf("expected 2 events, got %d", len(*recorded))
@@ -129,7 +143,7 @@ func TestManagerSyncPublishesStartedAndCompleted(t *testing.T) {
 func TestManagerSyncIsQuietForAnUnchangedQueue(t *testing.T) {
 	manager, recorded := newRecordedManager()
 
-	queue := []PrintJob{job("printer-1", "report.pdf")}
+	queue := active(job("printer-1", "report.pdf"))
 
 	manager.Sync(queue)
 	manager.Sync(queue)
@@ -145,8 +159,8 @@ func TestManagerSyncIsQuietForAnUnchangedQueue(t *testing.T) {
 func TestManagerSyncHandlesAHandoverInOnePoll(t *testing.T) {
 	manager, recorded := newRecordedManager()
 
-	manager.Sync([]PrintJob{job("printer-1", "first.pdf")})
-	manager.Sync([]PrintJob{job("printer-2", "second.pdf")})
+	manager.Sync(active(job("printer-1", "first.pdf")))
+	manager.Sync(active(job("printer-2", "second.pdf")))
 
 	if len(*recorded) != 2 {
 		t.Fatalf("expected 2 events, got %d", len(*recorded))
@@ -174,10 +188,10 @@ func TestManagerSyncHandlesAHandoverInOnePoll(t *testing.T) {
 func TestManagerSyncReportsTheHeadOfTheQueue(t *testing.T) {
 	manager, _ := newRecordedManager()
 
-	manager.Sync([]PrintJob{
+	manager.Sync(active(
 		job("printer-1", "first.pdf"),
 		job("printer-2", "second.pdf"),
-	})
+	))
 
 	snapshot := manager.Snapshot()
 
@@ -227,5 +241,224 @@ func TestManagerPrintIsRefusedWhileMonitored(t *testing.T) {
 		ErrMonitored,
 	) {
 		t.Fatalf("expected ErrMonitored, got %v", err)
+	}
+}
+
+// The whole point of reading the history: a job accepted and finished between
+// two polls is never in the queue, and only its number tells the manager it
+// ran at all.
+func TestManagerSyncReportsAJobMissedBetweenPolls(t *testing.T) {
+	manager, recorded := newRecordedManager()
+
+	manager.Sync(Queue{
+		Completed: []PrintJob{job("printer-30", "old.pdf")},
+	})
+
+	manager.Sync(Queue{
+		Completed: []PrintJob{
+			job("printer-31", "receipt.pdf"),
+			job("printer-30", "old.pdf"),
+		},
+	})
+
+	if len(*recorded) != 2 {
+		t.Fatalf("expected 2 events, got %+v", *recorded)
+	}
+
+	if (*recorded)[0].eventType != events.EventPrinterStarted ||
+		(*recorded)[0].data.JobID != "printer-31" {
+		t.Errorf(
+			"expected the missed job to start, got %+v",
+			(*recorded)[0],
+		)
+	}
+
+	if (*recorded)[1].eventType != events.EventPrinterCompleted ||
+		(*recorded)[1].data.JobID != "printer-31" {
+		t.Errorf(
+			"expected the missed job to finish, got %+v",
+			(*recorded)[1],
+		)
+	}
+}
+
+// The history a daemon finds at boot describes prints that happened while it
+// was down. Replaying it would announce them all over again on every restart.
+func TestManagerSyncAdoptsExistingHistorySilently(t *testing.T) {
+	manager, recorded := newRecordedManager()
+
+	manager.Sync(Queue{
+		Completed: []PrintJob{
+			job("printer-33", "third.pdf"),
+			job("printer-32", "second.pdf"),
+			job("printer-31", "first.pdf"),
+		},
+	})
+
+	if len(*recorded) != 0 {
+		t.Fatalf(
+			"expected the history to be adopted silently, got %+v",
+			*recorded,
+		)
+	}
+}
+
+// CUPS keeps a finished job in the history for a long time, so it comes back
+// on every poll. It must be reported exactly once.
+func TestManagerSyncReportsAMissedJobOnlyOnce(t *testing.T) {
+	manager, recorded := newRecordedManager()
+
+	manager.Sync(Queue{})
+
+	history := Queue{
+		Completed: []PrintJob{job("printer-31", "receipt.pdf")},
+	}
+
+	manager.Sync(history)
+	manager.Sync(history)
+	manager.Sync(history)
+
+	if len(*recorded) != 2 {
+		t.Fatalf(
+			"expected the missed job reported once, got %+v",
+			*recorded,
+		)
+	}
+}
+
+// A job watched through the queue lands in the history too. The difference
+// between the queues already reported it, so the history must not repeat it.
+func TestManagerSyncDoesNotRepeatAWatchedJob(t *testing.T) {
+	manager, recorded := newRecordedManager()
+
+	manager.Sync(Queue{})
+	manager.Sync(active(job("printer-31", "report.pdf")))
+
+	manager.Sync(Queue{
+		Completed: []PrintJob{job("printer-31", "report.pdf")},
+	})
+
+	if len(*recorded) != 2 {
+		t.Fatalf("expected 2 events, got %+v", *recorded)
+	}
+
+	if (*recorded)[0].eventType != events.EventPrinterStarted ||
+		(*recorded)[1].eventType != events.EventPrinterCompleted {
+		t.Errorf(
+			"expected one start then one completion, got %+v",
+			*recorded,
+		)
+	}
+}
+
+// Several short jobs can pass between two polls. They are reported in the
+// order the printer worked through them, which is the order of their numbers.
+func TestManagerSyncOrdersMissedJobsOldestFirst(t *testing.T) {
+	manager, recorded := newRecordedManager()
+
+	manager.Sync(Queue{})
+
+	// lpstat lists the history newest first, so the input is reversed.
+	manager.Sync(Queue{
+		Completed: []PrintJob{
+			job("printer-33", "third.pdf"),
+			job("printer-32", "second.pdf"),
+			job("printer-31", "first.pdf"),
+		},
+	})
+
+	expected := []string{
+		"printer-31",
+		"printer-31",
+		"printer-32",
+		"printer-32",
+		"printer-33",
+		"printer-33",
+	}
+
+	if len(*recorded) != len(expected) {
+		t.Fatalf(
+			"expected %d events, got %+v",
+			len(expected),
+			*recorded,
+		)
+	}
+
+	for index, id := range expected {
+		if (*recorded)[index].data.JobID != id {
+			t.Errorf(
+				"event %d: expected %q, got %q",
+				index,
+				id,
+				(*recorded)[index].data.JobID,
+			)
+		}
+	}
+}
+
+// A restarted cupsd counts from the beginning again, so the numbers no longer
+// relate to the ones already seen. Replaying the new history as missed jobs
+// would announce prints that already happened.
+func TestManagerSyncReSeedsWhenTheCounterRestarts(t *testing.T) {
+	manager, recorded := newRecordedManager()
+
+	manager.Sync(Queue{
+		Completed: []PrintJob{job("printer-33", "third.pdf")},
+	})
+
+	manager.Sync(Queue{
+		Completed: []PrintJob{job("printer-1", "after-restart.pdf")},
+	})
+
+	if len(*recorded) != 0 {
+		t.Fatalf(
+			"expected the restarted counter to re-seed, got %+v",
+			*recorded,
+		)
+	}
+
+	// Counting resumes from the new baseline.
+	manager.Sync(Queue{
+		Completed: []PrintJob{
+			job("printer-2", "next.pdf"),
+			job("printer-1", "after-restart.pdf"),
+		},
+	})
+
+	if len(*recorded) != 2 {
+		t.Fatalf(
+			"expected the next job reported, got %+v",
+			*recorded,
+		)
+	}
+
+	if (*recorded)[0].data.JobID != "printer-2" {
+		t.Errorf(
+			"expected the job after the restart, got %+v",
+			(*recorded)[0],
+		)
+	}
+}
+
+// A history that empties out must not read as a counter restart: it carries no
+// number to compare, so the watermark has to survive it.
+func TestManagerSyncKeepsTheWatermarkAcrossAnEmptyQueue(t *testing.T) {
+	manager, recorded := newRecordedManager()
+
+	manager.Sync(Queue{
+		Completed: []PrintJob{job("printer-31", "old.pdf")},
+	})
+
+	manager.Sync(Queue{})
+
+	manager.Sync(Queue{
+		Completed: []PrintJob{job("printer-31", "old.pdf")},
+	})
+
+	if len(*recorded) != 0 {
+		t.Fatalf(
+			"expected no events for a job already adopted, got %+v",
+			*recorded,
+		)
 	}
 }

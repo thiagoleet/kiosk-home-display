@@ -248,6 +248,14 @@ func (a *App) Run(ctx context.Context) error {
 		)
 
 		a.printerMon.Start()
+	} else {
+		// Silence here reads as a broken printer rather than a configuration
+		// choice: nothing else in the log mentions printing, so a box left on
+		// the default mode looks like one whose queue is never seen.
+		log.Printf(
+			"[APP] printer mode is %q, no print queue is watched. Set PRINTER_MODE=cups to report real jobs.",
+			a.config.Printer.Mode,
+		)
 	}
 
 	go func() {

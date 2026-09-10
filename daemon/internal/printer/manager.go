@@ -1,6 +1,7 @@
 package printer
 
 import (
+	"sort"
 	"sync"
 	"time"
 
@@ -19,9 +20,16 @@ type Manager struct {
 	// worked through, so a poll can tell a new job from one that has left.
 	active []PrintJob
 
+	// watermark is the highest job number any sync has seen, in the queue or
+	// in the history behind it. A finished job numbered above it is one that
+	// ran entirely between two polls, which is the only trace such a job
+	// leaves.
+	watermark int
+
 	// seeded marks the first sync as done. The jobs found by that first read
-	// are adopted silently: a job left in the queue would otherwise announce
-	// itself as new on every restart of the daemon.
+	// are adopted silently: a job left in the queue, or one sitting in the
+	// history, would otherwise announce itself as new on every restart of the
+	// daemon.
 	seeded bool
 
 	// monitored records that a real queue is being watched, which rules out
@@ -45,39 +53,64 @@ func (m *Manager) Snapshot() Snapshot {
 	return m.snapshot
 }
 
-// Sync publishes the difference between the queue it is given and the queue the
+// Sync publishes what changed between the queue it is given and the queue the
 // previous call saw: a job that appeared has started, and a job that is gone
 // has left the queue.
 //
+// The difference alone is blind to a job that was accepted and finished inside
+// one poll interval, which never appears in the queue at all. Those are
+// recovered from the history, by their job number: CUPS counts jobs up across
+// the whole server, so anything numbered above everything already seen is a
+// job that ran unobserved.
+//
 // CUPS reports no reason for a job leaving, so a cancelled or aborted job is
 // indistinguishable from one that printed and both are published as completed.
-func (m *Manager) Sync(jobs []PrintJob) {
+func (m *Manager) Sync(queue Queue) {
+	highest := highestNumber(queue)
+
 	m.mu.Lock()
 
 	previous := m.active
-
-	m.active = jobs
-	m.snapshot = snapshotOf(jobs)
-
 	seeded := m.seeded
+	watermark := m.watermark
 
+	// A counter that has gone backwards means cupsd restarted or had its job
+	// history cleared, so the numbers no longer line up with the ones already
+	// seen. CUPS drops the oldest jobs first, which leaves the highest one
+	// alone, so trimming does not look like this. The queue is adopted afresh
+	// rather than replayed.
+	restarted := highest > 0 && highest < watermark
+
+	m.active = queue.Active
+	m.snapshot = snapshotOf(queue.Active)
 	m.seeded = true
+
+	if highest > watermark || restarted {
+		m.watermark = highest
+	}
 
 	m.mu.Unlock()
 
-	if !seeded {
+	if !seeded || restarted {
 		return
 	}
 
 	// Completions first: within one poll a finished job precedes the next one
 	// picking up the printer.
 	for _, job := range previous {
-		if !containsJob(jobs, job.ID) {
+		if !containsJob(queue.Active, job.ID) {
 			m.publish(events.EventPrinterCompleted, job)
 		}
 	}
 
-	for _, job := range jobs {
+	// Then the jobs that were never watched, which both started and finished
+	// while the daemon was between polls.
+	for _, job := range missedJobs(queue, previous, watermark) {
+		m.publish(events.EventPrinterStarted, job)
+		m.publish(events.EventPrinterCompleted, job)
+	}
+
+	for _, job := range queue.Active {
 		if !containsJob(previous, job.ID) {
 			m.publish(events.EventPrinterStarted, job)
 		}
@@ -189,6 +222,59 @@ func snapshotOf(jobs []PrintJob) Snapshot {
 		State: StatePrinting,
 		Job:   &job,
 	}
+}
+
+// highestNumber is the largest job number the queue carries, counting both
+// the jobs still to run and the ones already finished.
+func highestNumber(queue Queue) int {
+	highest := 0
+
+	for _, job := range queue.Active {
+		if job.Number > highest {
+			highest = job.Number
+		}
+	}
+
+	for _, job := range queue.Completed {
+		if job.Number > highest {
+			highest = job.Number
+		}
+	}
+
+	return highest
+}
+
+// missedJobs are the finished jobs no sync ever saw running: numbered above
+// everything observed so far, and absent from both the previous queue and the
+// current one. They come back oldest first, the order the printer worked
+// through them.
+func missedJobs(
+	queue Queue,
+	previous []PrintJob,
+	watermark int,
+) []PrintJob {
+	var missed []PrintJob
+
+	for _, job := range queue.Completed {
+		if job.Number <= watermark {
+			continue
+		}
+
+		// Already accounted for: either it is being reported as completed
+		// just above, or it is still running and will be when it leaves.
+		if containsJob(previous, job.ID) ||
+			containsJob(queue.Active, job.ID) {
+			continue
+		}
+
+		missed = append(missed, job)
+	}
+
+	sort.Slice(missed, func(i int, j int) bool {
+		return missed[i].Number < missed[j].Number
+	})
+
+	return missed
 }
 
 func containsJob(

@@ -13,6 +13,12 @@ const lpstatQueuedOutput = `Brother_DCP_1600_series-31 thiago          485376   
 Brother_DCP_1600_series_2-32 thiago           11264   Wed Sep  9 15:44:02 2026
 `
 
+// Captured from "lpstat -W completed -o", which prints the history in the
+// same columns as the queue, newest job first.
+const lpstatCompletedOutput = `Brother_DCP_1600_series_3-30 thiago           12288   Thu Sep 10 15:34:33 2026
+Brother_DCP_1600_series-29 thiago           81920   Tue May 12 18:02:46 2026
+`
+
 // Captured from "lpq -a", whose columns are the rank, the owner, the job
 // number, the document title and the size.
 const lpqOutput = `Brother_DCP_1600_series is ready and printing
@@ -36,6 +42,7 @@ func newCommandStub() *commandStub {
 	return &commandStub{
 		outputs: map[string]string{
 			"lpstat -W not-completed -o": lpstatQueuedOutput,
+			"lpstat -W completed -o":     lpstatCompletedOutput,
 			"lpq -a":                     lpqOutput,
 		},
 		errs: map[string]error{},
@@ -68,16 +75,27 @@ func newStubbedCUPSSource() (*CUPSSource, *commandStub) {
 	return source, stub
 }
 
-func TestCUPSSourceActiveJobs(t *testing.T) {
+func TestCUPSSourceReadsTheActiveQueue(t *testing.T) {
 	source, stub := newStubbedCUPSSource()
 
-	jobs, err := source.ActiveJobs()
+	queue, err := source.Queue()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
+	jobs := queue.Active
+
 	if len(jobs) != 2 {
 		t.Fatalf("expected 2 jobs, got %d", len(jobs))
+	}
+
+	// The job number drives the title lookup and the manager's high-water
+	// mark, so it has to come out of the identifier.
+	if jobs[0].Number != 31 {
+		t.Errorf(
+			"expected the CUPS job number, got %d",
+			jobs[0].Number,
+		)
 	}
 
 	if jobs[0].ID != "Brother_DCP_1600_series-31" {
@@ -116,13 +134,13 @@ func TestCUPSSourceReportsAnEmptyQueue(t *testing.T) {
 
 	stub.outputs["lpstat -W not-completed -o"] = ""
 
-	jobs, err := source.ActiveJobs()
+	queue, err := source.Queue()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(jobs) != 0 {
-		t.Fatalf("expected no jobs, got %d", len(jobs))
+	if len(queue.Active) != 0 {
+		t.Fatalf("expected no jobs, got %d", len(queue.Active))
 	}
 
 	// An empty queue needs no titles, so lpq is not worth running.
@@ -140,10 +158,12 @@ func TestCUPSSourceFallsBackToTheJobIdentifier(t *testing.T) {
 
 	stub.errs["lpq -a"] = errors.New("lpq: Unable to connect")
 
-	jobs, err := source.ActiveJobs()
+	queue, err := source.Queue()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
+	jobs := queue.Active
 
 	if len(jobs) != 2 {
 		t.Fatalf("expected 2 jobs, got %d", len(jobs))
@@ -164,7 +184,7 @@ func TestCUPSSourceFailsWhenTheQueueCannotBeRead(t *testing.T) {
 		"lpstat: Bad file descriptor",
 	)
 
-	if _, err := source.ActiveJobs(); err == nil {
+	if _, err := source.Queue(); err == nil {
 		t.Fatal("expected an error when lpstat fails")
 	}
 }
@@ -174,7 +194,7 @@ func TestCUPSSourceNamesAMissingInstallation(t *testing.T) {
 
 	stub.errs["lpstat -W not-completed -o"] = exec.ErrNotFound
 
-	_, err := source.ActiveJobs()
+	_, err := source.Queue()
 	if err == nil {
 		t.Fatal("expected an error when lpstat is missing")
 	}
@@ -206,5 +226,83 @@ func TestParseIgnoresNonJobLines(t *testing.T) {
 
 	if len(titles) != 0 {
 		t.Fatalf("expected no titles, got %d", len(titles))
+	}
+}
+
+// The history is the only place a job shorter than one poll interval shows up.
+func TestCUPSSourceReadsTheHistory(t *testing.T) {
+	source, _ := newStubbedCUPSSource()
+
+	queue, err := source.Queue()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(queue.Completed) != 2 {
+		t.Fatalf(
+			"expected 2 finished jobs, got %+v",
+			queue.Completed,
+		)
+	}
+
+	if queue.Completed[0].ID != "Brother_DCP_1600_series_3-30" {
+		t.Errorf(
+			"expected the finished job identifier, got %q",
+			queue.Completed[0].ID,
+		)
+	}
+
+	if queue.Completed[0].Number != 30 {
+		t.Errorf(
+			"expected the finished job number, got %d",
+			queue.Completed[0].Number,
+		)
+	}
+}
+
+// lpq only lists the queue, so a job that finished before the first poll saw
+// it has no title to recover and keeps its identifier.
+func TestCUPSSourceLeavesFinishedJobsUntitled(t *testing.T) {
+	source, _ := newStubbedCUPSSource()
+
+	queue, err := source.Queue()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if queue.Completed[0].Name != "Brother_DCP_1600_series_3-30" {
+		t.Errorf(
+			"expected the identifier as a name, got %q",
+			queue.Completed[0].Name,
+		)
+	}
+}
+
+// An unreadable history costs the short jobs, not the poll: what is printing
+// right now still reads correctly and must still be reported.
+func TestCUPSSourceToleratesAnUnreadableHistory(t *testing.T) {
+	source, stub := newStubbedCUPSSource()
+
+	stub.errs["lpstat -W completed -o"] = errors.New(
+		"lpstat: Forbidden",
+	)
+
+	queue, err := source.Queue()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(queue.Active) != 2 {
+		t.Fatalf(
+			"expected the queue to survive, got %+v",
+			queue.Active,
+		)
+	}
+
+	if len(queue.Completed) != 0 {
+		t.Errorf(
+			"expected no history, got %+v",
+			queue.Completed,
+		)
 	}
 }

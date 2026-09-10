@@ -3,16 +3,16 @@ package printer
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
 // queuedJob matches the identifier lpstat prints in the first column of a
-// queued job, which is the destination and the CUPS job number joined by a
-// dash, such as "Brother_DCP_1600_series-31". Anything else on the line is a
-// header or a warning and is skipped.
+// job, which is the destination and the CUPS job number joined by a dash,
+// such as "Brother_DCP_1600_series-31". Anything else on the line is a header
+// or a warning and is skipped.
 var queuedJob = regexp.MustCompile(
 	`^(.+)-([0-9]+)$`,
 )
@@ -25,8 +25,14 @@ var queuedJob = regexp.MustCompile(
 // column is a stable, unique identifier. It does not print document titles
 // though, so lpq fills those in, and a job whose title cannot be recovered
 // keeps its identifier as a name.
+//
+// The two loggers are only touched from the poll path, which is single
+// threaded. See changeLogger.
 type CUPSSource struct {
 	command commandRunner
+
+	titleLog     changeLogger
+	completedLog changeLogger
 }
 
 func NewCUPSSource() *CUPSSource {
@@ -35,59 +41,96 @@ func NewCUPSSource() *CUPSSource {
 	}
 }
 
-func (s *CUPSSource) ActiveJobs() ([]PrintJob, error) {
+func (s *CUPSSource) Queue() (Queue, error) {
+	active, err := s.jobs("not-completed")
+	if err != nil {
+		return Queue{}, err
+	}
+
+	// lpq lists the queue, so only a job still in it can be given a title.
+	if len(active) > 0 {
+		s.applyTitles(active)
+	}
+
+	// The history is what catches a job that came and went inside one poll
+	// interval. Losing it costs those short jobs, which is not worth failing
+	// the whole poll over while the active queue still reads correctly.
+	completed, err := s.jobs("completed")
+	if err != nil {
+		s.completedLog.Failed(
+			"[PRINTER] finished jobs unavailable, prints shorter than one poll will be missed: %v",
+			err,
+		)
+
+		return Queue{Active: active}, nil
+	}
+
+	s.completedLog.Recovered(
+		"[PRINTER] finished jobs readable again",
+	)
+
+	return Queue{
+		Active:    active,
+		Completed: completed,
+	}, nil
+}
+
+// jobs reads one half of the queue. The selector is the lpstat -W argument:
+// "not-completed" for the jobs still to run, "completed" for the history.
+func (s *CUPSSource) jobs(
+	selector string,
+) ([]PrintJob, error) {
 	output, err := s.command(
 		"lpstat",
 		"-W",
-		"not-completed",
+		selector,
 		"-o",
 	)
 	if err != nil {
 		return nil, cupsError("lpstat", err)
 	}
 
-	jobs := parseQueuedJobs(output)
+	return parseQueuedJobs(output), nil
+}
 
-	if len(jobs) == 0 {
-		return nil, nil
+// applyTitles replaces the identifiers standing in as names with the document
+// titles, for the jobs lpq can still see. It is best effort: losing a title is
+// not worth failing a poll over, so a broken lpq leaves every job named after
+// its identifier.
+func (s *CUPSSource) applyTitles(jobs []PrintJob) {
+	output, err := s.command("lpq", "-a")
+	if err != nil {
+		s.titleLog.Failed(
+			"[PRINTER] job titles unavailable: %v",
+			err,
+		)
+
+		return
 	}
 
-	titles := s.jobTitles()
+	s.titleLog.Recovered(
+		"[PRINTER] job titles readable again",
+	)
+
+	titles := parseJobTitles(output)
 
 	for index, job := range jobs {
-		number := jobNumber(job.ID)
+		number := strconv.Itoa(job.Number)
 
 		if title := titles[number]; title != "" {
 			jobs[index].Name = title
 		}
 	}
-
-	return jobs, nil
 }
 
-// jobTitles maps CUPS job numbers to document titles. It is best effort: lpq
-// is the only tool that reports titles, and losing them is not worth failing a
-// poll over, so a broken lpq leaves every job named after its identifier.
-func (s *CUPSSource) jobTitles() map[string]string {
-	output, err := s.command("lpq", "-a")
-	if err != nil {
-		log.Printf(
-			"[PRINTER] job titles unavailable: %v",
-			err,
-		)
-
-		return nil
-	}
-
-	return parseJobTitles(output)
-}
-
-// parseQueuedJobs reads the job listing lpstat prints:
+// parseQueuedJobs reads the job listing lpstat prints, which is the same for
+// the queue and for the history:
 //
 //	Brother_DCP_1600_series-31 thiago 485376 Wed Sep  9 15:43:15 2026
 //
-// Only the identifier is taken from it. The remaining columns describe the
-// owner, the byte size and the queue time, none of which the display shows.
+// Only the identifier is taken from it, and the job number within it. The
+// remaining columns describe the owner, the byte size and the queue time,
+// none of which the display shows.
 func parseQueuedJobs(output string) []PrintJob {
 	var jobs []PrintJob
 
@@ -98,13 +141,21 @@ func parseQueuedJobs(output string) []PrintJob {
 			continue
 		}
 
-		if !queuedJob.MatchString(fields[0]) {
+		matches := queuedJob.FindStringSubmatch(fields[0])
+
+		if matches == nil {
+			continue
+		}
+
+		number, err := strconv.Atoi(matches[2])
+		if err != nil {
 			continue
 		}
 
 		jobs = append(jobs, PrintJob{
-			ID:   fields[0],
-			Name: fields[0],
+			ID:     fields[0],
+			Name:   fields[0],
+			Number: number,
 		})
 	}
 
@@ -152,18 +203,6 @@ func parseJobTitles(output string) map[string]string {
 	}
 
 	return titles
-}
-
-// jobNumber returns the CUPS job number carried by an lpstat identifier, which
-// is what lpq reports jobs by.
-func jobNumber(id string) string {
-	matches := queuedJob.FindStringSubmatch(id)
-
-	if matches == nil {
-		return ""
-	}
-
-	return matches[2]
 }
 
 func isNumber(value string) bool {

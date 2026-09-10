@@ -31,6 +31,7 @@ export const defaultIcons: KioskThemeIcons = {
   status: Circle,
   "status.online": Circle,
   "status.offline": Circle,
+  "status.connecting": Circle,
 
   wifi: Wifi,
   "wifi-off": WifiOff,

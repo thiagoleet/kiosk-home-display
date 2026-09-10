@@ -92,7 +92,7 @@ const ConnectionStatusIndicator = ({
     >
       <ThemeIcon
         name={statusClass.iconName}
-        size={8}
+        size={16}
         fill="currentColor"
         aria-hidden="true"
       />

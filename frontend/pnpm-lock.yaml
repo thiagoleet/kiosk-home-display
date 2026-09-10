@@ -11,6 +11,9 @@ importers:
       '@pxlkit/core':
         specifier: ^1.3.4
         version: 1.3.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@pxlkit/effects':
+        specifier: ^1.2.3
+        version: 1.2.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@pxlkit/feedback':
         specifier: ^1.2.5
         version: 1.2.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -228,6 +231,9 @@ packages:
     peerDependencies:
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
+
+  '@pxlkit/effects@1.2.3':
+    resolution: {integrity: sha512-MEztD6Ebt6DyX1+HURtmXppofYjIC1Szif8v8CA1UYUa2xhurx4gngHd/+DgWLYp72MljcK6oixlMhky9CoJmQ==}
 
   '@pxlkit/feedback@1.2.5':
     resolution: {integrity: sha512-4kMYGfsl5y7mSVNz0pQ3vJA0iELDyexqYIvMKp9/GlfUyC+ADFOCJ87i5jwP1+k+xxGyY4wmbq2DDLr0LwLQ+g==}
@@ -1134,6 +1140,13 @@ snapshots:
     dependencies:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
+
+  '@pxlkit/effects@1.2.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@pxlkit/core': 1.3.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+    transitivePeerDependencies:
+      - react
+      - react-dom
 
   '@pxlkit/feedback@1.2.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:

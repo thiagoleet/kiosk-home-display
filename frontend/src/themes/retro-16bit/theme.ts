@@ -4,11 +4,12 @@ import notificationSound from "../../assets/sounds/notification.mp3";
 import type { KioskTheme } from "@/types/theme";
 
 import { Cloud, CloudSun, Rain, Sun, Thunder } from "@pxlkit/weather";
-import { Robot } from "@pxlkit/ui";
+import { Check, Robot } from "@pxlkit/ui";
 
 import { AnimatedIcon, RetroIcon } from "../retro/pxlkit-icon";
 import { Bell, CheckCircle, Hourglass } from "@pxlkit/feedback";
-import { LevelUp, Skull } from "@pxlkit/gamification";
+import { Skull } from "@pxlkit/gamification";
+import { GlowPulse } from "@pxlkit/effects";
 
 export const retro16bitTheme: KioskTheme = {
   id: "retro-16bit",
@@ -87,6 +88,9 @@ export const retro16bitTheme: KioskTheme = {
     "status.offline": (props) =>
       createElement(RetroIcon, { icon: Skull, size: props.size }),
     "status.online": (props) =>
-      createElement(RetroIcon, { icon: LevelUp, size: props.size }),
+      createElement(RetroIcon, { icon: Check, size: props.size }),
+
+    "status.connecting": (props) =>
+      createElement(AnimatedIcon, { icon: GlowPulse, size: props.size }),
   },
 };

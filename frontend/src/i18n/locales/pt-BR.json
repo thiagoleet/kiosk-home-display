@@ -17,6 +17,7 @@
   "printer.title": "Impressora",
   "status.offline": "OFFLINE",
   "status.online": "ONLINE",
+  "status.connecting": "CONECTANDO",
   "weather.condition": "Condição: {{condition}}",
   "weather.condition.clear": "Limpo",
   "weather.condition.partly_cloudy": "Parcialmente Nublado",

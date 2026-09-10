@@ -52,6 +52,10 @@
   color: var(--color-error);
 }
 
+.connection-status--connecting {
+  color: var(--color-warning);
+}
+
 .connection-status--hidden {
   opacity: 0;
   visibility: hidden;

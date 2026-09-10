@@ -77,7 +77,8 @@ export type ThemeIconName =
   | "weather.thunderstorm"
   | "status"
   | "status.offline"
-  | "status.online";
+  | "status.online"
+  | "status.connecting";
 
 export type ThemeIconProps = {
   size?: number;

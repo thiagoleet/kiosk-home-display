@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 // import { useKiosk } from "@/hooks/use-kiosk";
 import { useTranslation } from "@/hooks/use-translation";
 import { useWebSocketContext } from "@/hooks/use-websocket-context";
 import { ThemeIcon } from "../theme/theme-icon";
+import type { WebSocketStatus } from "@/types/websocket";
 
 const ONLINE_STATUS_DURATION = 3000;
 
@@ -12,24 +13,55 @@ type KioskHeaderProps = {
 };
 
 type ConnectionStatusIndicatorProps = {
-  isConnected: boolean;
+  status: WebSocketStatus;
 };
 
 type NotificationIndicatorProps = {
   hasNotification: boolean;
 };
 
+type ConnectionStatus = {
+  className: string;
+  iconName: "status.online" | "status.offline" | "status.connecting";
+};
+
 const ConnectionStatusIndicator = ({
-  isConnected,
+  status,
 }: ConnectionStatusIndicatorProps) => {
   const { t } = useTranslation();
 
   const [isConnectionStatusVisible, setConnectionStatusVisible] =
     useState(true);
-  const shouldShowConnectionStatus = !isConnected || isConnectionStatusVisible;
+  const shouldShowConnectionStatus =
+    status === "connected" || isConnectionStatusVisible;
+
+  const statusClass = useMemo<ConnectionStatus>(() => {
+    switch (status) {
+      case "connected":
+        return {
+          className: "connection-status--connected",
+          iconName: "status.online",
+        };
+      case "disconnected":
+        return {
+          className: "connection-status--disconnected",
+          iconName: "status.offline",
+        };
+      case "connecting":
+        return {
+          className: "connection-status--connecting",
+          iconName: "status.connecting",
+        };
+      default:
+        return {
+          className: "connection-status--disconnected",
+          iconName: "status.offline",
+        };
+    }
+  }, [status]);
 
   useEffect(() => {
-    if (!isConnected) {
+    if (status === "disconnected") {
       return;
     }
 
@@ -45,15 +77,13 @@ const ConnectionStatusIndicator = ({
       window.clearTimeout(showTimer);
       window.clearTimeout(hideTimer);
     };
-  }, [isConnected]);
+  }, [status]);
 
   return (
     <div
       className={[
         "connection-status",
-        isConnected
-          ? "connection-status--connected"
-          : "connection-status--disconnected",
+        statusClass.className,
         !shouldShowConnectionStatus && "connection-status--hidden",
       ]
         .filter(Boolean)
@@ -61,13 +91,13 @@ const ConnectionStatusIndicator = ({
       aria-hidden={!shouldShowConnectionStatus}
     >
       <ThemeIcon
-        name={isConnected ? "status.online" : "status.offline"}
+        name={statusClass.iconName}
         size={8}
         fill="currentColor"
         aria-hidden="true"
       />
 
-      <span>{t(isConnected ? "status.online" : "status.offline")}</span>
+      <span>{t(statusClass.iconName)}</span>
     </div>
   );
 };
@@ -102,9 +132,6 @@ const NotificationIndicator = ({
 export function KioskHeader({ hasNotification }: KioskHeaderProps) {
   const { status } = useWebSocketContext();
 
-  const isConnected = status === "connected";
-  // const { profile } = useKiosk();
-
   return (
     <header className="kiosk-header">
       {/* <h1 className="kiosk-name">{profile.name}</h1> */}
@@ -112,7 +139,7 @@ export function KioskHeader({ hasNotification }: KioskHeaderProps) {
 
       <div className="kiosk-header__status">
         <NotificationIndicator hasNotification={hasNotification} />
-        <ConnectionStatusIndicator isConnected={isConnected} />
+        <ConnectionStatusIndicator status={status} />
       </div>
     </header>
   );

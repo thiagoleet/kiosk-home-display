@@ -13,25 +13,25 @@ type ForecastItemProps = {
 function ForecastItem({ item }: ForecastItemProps) {
   const { t, locale } = useTranslation();
 
-  const formattedDate = formatDate(new Date(item.date), "EEEE", {
+  const formattedDate = formatDate(new Date(item.date), "EE", {
     locale: locale === "pt-BR" ? ptBR : enUS,
   });
 
   return (
     <div className="widget forecast-widget__item">
-      <span>{formattedDate}</span>
+      <span className="widget-title ">{formattedDate}</span>
       {item.icon && (
         <ThemeIcon
           name={item.icon}
-          size={96}
+          size={128}
         />
       )}
 
-      <span>
+      <span className="widget-text">
         {t("forecast.min")}: {item.temperatureMin}
       </span>
 
-      <span>
+      <span className="widget-text">
         {t("forecast.max")}: {item.temperatureMax}
       </span>
     </div>
@@ -50,7 +50,9 @@ export function WeatherForecastViewWidget() {
 
   return (
     <section className="home-view forecast-view">
-      <header>{t("forecast.title")}</header>
+      <header>
+        <h2>{t("forecast.title")}</h2>
+      </header>
 
       <div className="forecast-view__content">
         {patchetForecast.map((item) => (

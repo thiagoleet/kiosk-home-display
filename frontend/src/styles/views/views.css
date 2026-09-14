@@ -12,6 +12,11 @@
     cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+
+.home-view header h2 {
+  font-size: clamp(1.5rem, 3vw, 3rem);
+}
+
 .weather-view .kiosk-weather{
   font-size: clamp(4.5rem, 22vw, 7rem);
   /* line-height: 4.5; */

@@ -19,11 +19,15 @@
 
   color: var(--color-secondary);
 
-  font-size: 0.8rem;
+  font-size: clamp(1.5rem, 3vw, 3rem);
   font-weight: 600;
 
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.widget-text {
+  font-size: clamp(1.5rem, 2vw, 2rem);
 }
 
 .forecast-widget__item {

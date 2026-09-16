@@ -34,11 +34,24 @@ binary that was cross-compiled elsewhere, pass its path instead:
 ./deploy/daemon/install.sh ./daemon/kiosk
 ```
 
+Name the box being installed with `KIOSK_ENV`, so the env file is created from
+that box's template under `deploy/environments/` instead of the generic
+example:
+
+```sh
+KIOSK_ENV=snespi ./deploy/daemon/install.sh
+```
+
+Or `make deploy-daemon KIOSK_ENV=snespi`, which is the same thing. See
+`deploy/environments/README.md`.
+
 The installer:
 
 - installs the binary to `/usr/local/bin/kiosk-home-display`
-- creates `/etc/kiosk-home-display/kiosk.env` from the template, without
-  overwriting an existing file
+- creates `/etc/kiosk-home-display/kiosk.env` from the template — the one for
+  `KIOSK_ENV`, or `kiosk.env.example` without it — and never overwrites an
+  existing file unless `KIOSK_ENV_OVERWRITE=true` is passed, which keeps the
+  previous file as `kiosk.env.bak`
 - creates `/var/lib/kiosk-home-display` as the service working directory
 - installs and enables `kiosk-home-display.service`
 
@@ -155,6 +168,31 @@ neither real mode can power the screen off. Confirm with:
 ls /run/user/$(id -u)/wayland-*
 ```
 
+### Printer
+
+`PRINTER_MODE` decides where print jobs come from, and it is what separates the
+two boxes today:
+
+- `cups` polls the real queue on this host. Needs the `cups-client` package;
+  the daemon only reads the queue and submits nothing.
+- `virtual` watches nothing and leaves `POST /api/printer/print` simulating a
+  job, which is how the notification and activity paths are exercised in
+  development.
+- `off` is a host with no printer. Nothing is watched, the simulate endpoint
+  answers `404`, and the startup log says the printer is disabled rather than
+  warning about an unwatched queue.
+
+Keep this in step with the frontend built for the same box: a profile whose
+`features.printer` is true on a host running `off` would show a printer widget
+sitting on "ready" for good. The environment folders pair the two.
+
+Check the mode in effect after a deploy — the installer prints it, and so does
+the service log:
+
+```sh
+journalctl -u kiosk-home-display -n 20 | grep -i printer
+```
+
 ### Schedule and idle timeout
 
 The scheduler applies the window the current time already sits in when the
@@ -185,11 +223,17 @@ because the daemon resolves it relative to the working directory.
 
 ```sh
 git pull
-./deploy/daemon/install.sh
+KIOSK_ENV=snespi ./deploy/daemon/install.sh
 ```
 
 The installer rebuilds, replaces the binary, and restarts the service. The env
-file and the database survive the update.
+file and the database survive the update, so a value changed in the
+environment template in git does not reach an installed box — the installer
+says so when it skips one. To push the template over the installed file:
+
+```sh
+KIOSK_ENV_OVERWRITE=true KIOSK_ENV=snespi ./deploy/daemon/install.sh
+```
 
 ## Operate
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { useFeature } from "./use-feature";
 import { useWebSocketContext } from "./use-websocket-context";
 
 import type { PrintJob } from "../types/printer";
@@ -13,6 +14,8 @@ export function usePrinter() {
   const [currentJob, setCurrentJob] = useState<PrintJob | null>(null);
 
   const { subscribe } = useWebSocketContext();
+
+  const printerEnabled = useFeature("printer");
 
   const handleStarted = useCallback((message: WebSocketMessage) => {
     if (message.type !== "printer.started") {
@@ -37,6 +40,13 @@ export function usePrinter() {
   }, []);
 
   useEffect(() => {
+    // A box without a printer never receives these events — its daemon runs
+    // with PRINTER_MODE=off — so subscribing would only keep a listener that
+    // can never fire.
+    if (!printerEnabled) {
+      return;
+    }
+
     const unsubscribeStarted = subscribe("printer.started", handleStarted);
 
     const unsubscribeCompleted = subscribe(
@@ -48,7 +58,7 @@ export function usePrinter() {
       unsubscribeStarted();
       unsubscribeCompleted();
     };
-  }, [subscribe, handleStarted, handleCompleted]);
+  }, [printerEnabled, subscribe, handleStarted, handleCompleted]);
 
   return {
     state,

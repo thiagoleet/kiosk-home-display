@@ -42,6 +42,27 @@ The project is organized as a monorepo containing two main applications:
 └── docs/ # Architecture and project documentation
 ```
 
+### Environments
+
+Each Pi running the kiosk is an environment with its own settings under
+`deploy/environments/<name>/`. Two exist today:
+
+| | snespi | milkpi |
+| --- | --- | --- |
+| Printer | none | attached |
+| `PRINTER_MODE` | `off` | `cups` |
+| `VITE_KIOSK_PROFILE` | `snespi` | `milkpi` |
+
+Deploy one box from the repository root, on that box:
+
+```sh
+make deploy-snespi
+make deploy-milkpi
+```
+
+The frontend build belongs to the box it was built for, because Vite inlines
+the profile at build time. See `deploy/environments/README.md`.
+
 The Go daemon acts as the system's event and display controller. It monitors external events, manages display state and scheduling, and communicates with the React frontend through WebSockets.
 
 ```text

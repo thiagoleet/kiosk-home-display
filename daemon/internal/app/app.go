@@ -147,15 +147,20 @@ func New(cfg config.Config) (*App, error) {
 	)
 
 	// A virtual printer has no queue to watch, so no monitor is created and the
-	// simulated job endpoint stays available for development.
+	// simulated job endpoint stays available for development. A host with no
+	// printer at all watches nothing either, and refuses the endpoint as well.
 	var printerMonitor *printer.Monitor
 
-	if cfg.Printer.Mode == "cups" {
+	switch cfg.Printer.Mode {
+	case "cups":
 		printerMonitor = printer.NewMonitor(
 			printerManager,
 			printer.NewCUPSSource(),
 			cfg.Printer.PollInterval,
 		)
+
+	case "off":
+		printerManager.Disable()
 	}
 
 	notificationManager := notification.NewManager(
@@ -241,19 +246,28 @@ func (a *App) Run(ctx context.Context) error {
 		a.scheduler.Start()
 	}
 
-	if a.printerMon != nil {
+	switch {
+	case a.printerMon != nil:
 		log.Printf(
 			"[APP] watching the CUPS queue every %s",
 			a.config.Printer.PollInterval,
 		)
 
 		a.printerMon.Start()
-	} else {
+
+	case a.config.Printer.Mode == "off":
+		// Deliberately not a warning: this host has no printer, so an
+		// unwatched queue is the configured outcome rather than an oversight.
+		log.Printf(
+			"[APP] printer is disabled on this host",
+		)
+
+	default:
 		// Silence here reads as a broken printer rather than a configuration
 		// choice: nothing else in the log mentions printing, so a box left on
 		// the default mode looks like one whose queue is never seen.
 		log.Printf(
-			"[APP] printer mode is %q, no print queue is watched. Set PRINTER_MODE=cups to report real jobs.",
+			"[APP] printer mode is %q, no print queue is watched. Set PRINTER_MODE=cups to report real jobs, or PRINTER_MODE=off on a host with no printer.",
 			a.config.Printer.Mode,
 		)
 	}

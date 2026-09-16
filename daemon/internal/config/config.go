@@ -50,7 +50,8 @@ type ActivityConfig struct {
 
 // Mode selects where print jobs come from: "cups" watches the real queue on
 // the host, "virtual" watches nothing and leaves the simulated job endpoint in
-// place for development.
+// place for development, and "off" is a host with no printer at all, where the
+// endpoint is refused and nothing is logged about an unwatched queue.
 type PrinterConfig struct {
 	Mode         string
 	PollInterval time.Duration
@@ -157,7 +158,7 @@ func (c Config) Validate() error {
 	}
 
 	switch c.Printer.Mode {
-	case "virtual", "cups":
+	case "off", "virtual", "cups":
 		// Supported.
 
 	default:

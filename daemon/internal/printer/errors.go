@@ -13,6 +13,13 @@ var (
 		"printer is already printing",
 	)
 
+	// ErrDisabled is returned on a host configured without a printer. The
+	// route still exists, because the binary is the same everywhere, but the
+	// feature it stands for does not.
+	ErrDisabled = errors.New(
+		"no printer is configured on this host",
+	)
+
 	// ErrMonitored is returned when the daemon watches a real CUPS queue.
 	// Simulating a job there would publish events for a print that never
 	// happened, and the next poll would contradict them.

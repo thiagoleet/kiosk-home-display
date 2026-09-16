@@ -74,11 +74,15 @@ func (h *PrinterHandler) Print(
 }
 
 // printErrorStatus separates a caller that asked for something impossible from
-// a printer that cannot take the job right now.
+// a printer that cannot take the job right now. A host configured without a
+// printer answers 404: the feature is absent there, not busy.
 func printErrorStatus(err error) int {
 	switch {
 	case errors.Is(err, printer.ErrInvalidJobName):
 		return nethttp.StatusBadRequest
+
+	case errors.Is(err, printer.ErrDisabled):
+		return nethttp.StatusNotFound
 
 	case errors.Is(err, printer.ErrMonitored):
 		return nethttp.StatusConflict

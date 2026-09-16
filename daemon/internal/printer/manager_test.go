@@ -244,6 +244,28 @@ func TestManagerPrintIsRefusedWhileMonitored(t *testing.T) {
 	}
 }
 
+func TestManagerPrintIsRefusedWhenDisabled(t *testing.T) {
+	manager, recorded := newRecordedManager()
+
+	manager.Disable()
+
+	if _, err := manager.Print("report.pdf"); !errors.Is(
+		err,
+		ErrDisabled,
+	) {
+		t.Fatalf("expected ErrDisabled, got %v", err)
+	}
+
+	// A refusal that still announced a start would leave the frontend showing
+	// a print on a host that has no printer.
+	if len(*recorded) != 0 {
+		t.Fatalf(
+			"expected no events, got %d",
+			len(*recorded),
+		)
+	}
+}
+
 // The whole point of reading the history: a job accepted and finished between
 // two polls is never in the queue, and only its number tells the manager it
 // ran at all.

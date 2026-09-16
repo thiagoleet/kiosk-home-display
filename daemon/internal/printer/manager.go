@@ -35,6 +35,10 @@ type Manager struct {
 	// monitored records that a real queue is being watched, which rules out
 	// simulating jobs through the HTTP API.
 	monitored bool
+
+	// disabled records a host that has no printer at all, which rules out
+	// simulating jobs the same way a monitored queue does.
+	disabled bool
 }
 
 func NewManager(bus *events.Bus) *Manager {
@@ -119,7 +123,8 @@ func (m *Manager) Sync(queue Queue) {
 
 // Print simulates a job for development and for exercising the frontend. It is
 // refused once a real queue is monitored, where the events would describe a
-// print that never happened.
+// print that never happened, and on a host with no printer, where they would
+// describe a device that is not there.
 func (m *Manager) Print(
 	name string,
 ) (PrintJob, error) {
@@ -128,6 +133,12 @@ func (m *Manager) Print(
 	}
 
 	m.mu.Lock()
+
+	if m.disabled {
+		m.mu.Unlock()
+
+		return PrintJob{}, ErrDisabled
+	}
 
 	if m.monitored {
 		m.mu.Unlock()
@@ -158,6 +169,16 @@ func (m *Manager) Print(
 	go m.simulatePrint(job)
 
 	return job, nil
+}
+
+// Disable marks the host as having no printer. Unlike setMonitored this is
+// driven by configuration rather than by a monitor starting, so it is exported
+// for the wiring in the app package.
+func (m *Manager) Disable() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.disabled = true
 }
 
 func (m *Manager) setMonitored() {

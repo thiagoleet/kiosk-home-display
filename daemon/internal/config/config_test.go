@@ -258,6 +258,23 @@ func TestLoadOverridesDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadAcceptsPrinterModeOff(t *testing.T) {
+	t.Setenv("PRINTER_MODE", "off")
+
+	config, err := Load()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if config.Printer.Mode != "off" {
+		t.Fatalf(
+			"expected printer mode off, got %q",
+			config.Printer.Mode,
+		)
+	}
+}
+
 func TestLoadRejectsInvalidPrinterMode(t *testing.T) {
 	t.Setenv("PRINTER_MODE", "invalid")
 

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { screensaverEnabled } from "../config/screensaver-config";
 import type { Notification } from "../types/notification";
 import type { ScreenMode } from "../types/screen";
 
@@ -15,7 +16,7 @@ export function useScreenMode({
   isIdle,
 }: UseScreenModeOptions) {
   const mode = useMemo<ScreenMode>(() => {
-    if (!isScreenOn) {
+    if (screensaverEnabled && !isScreenOn) {
       return "screensaver";
     }
 
@@ -26,7 +27,7 @@ export function useScreenMode({
       return "notification";
     }
 
-    return isIdle ? "screensaver" : "home";
+    return screensaverEnabled && isIdle ? "screensaver" : "home";
   }, [notification, isScreenOn, isIdle]);
 
   return {

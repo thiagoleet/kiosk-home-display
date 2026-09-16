@@ -34,5 +34,6 @@
   "forecast.title": "Weather Forecast",
   "forecast.unavailable": "Weather forecast unavailable",
   "forecast.min": "Min",
-  "forecast.max": "Max"
+  "forecast.max": "Max",
+  "forecast.today": "Today"
 }

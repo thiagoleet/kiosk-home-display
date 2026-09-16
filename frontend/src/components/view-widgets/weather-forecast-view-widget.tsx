@@ -6,20 +6,23 @@ import { ptBR, enUS } from "date-fns/locale";
 import { ThemeIcon } from "../theme/theme-icon";
 import { useTranslation } from "@/hooks/use-translation";
 
-type ForecastItemProps = {
+type ForecastItemProps = Readonly<{
   item: WeatherForecast;
-};
+  index: number;
+}>;
 
-function ForecastItem({ item }: ForecastItemProps) {
+function ForecastItem({ item, index }: ForecastItemProps) {
   const { t, locale } = useTranslation();
 
   const formattedDate = formatDate(new Date(item.date), "EE", {
     locale: locale === "pt-BR" ? ptBR : enUS,
   });
 
+  const widgetTitle = index === 0 ? t("forecast.today") : formattedDate;
+
   return (
     <div className="widget forecast-widget__item">
-      <span className="widget-title ">{formattedDate}</span>
+      <span className="widget-title ">{widgetTitle}</span>
       {item.icon && (
         <ThemeIcon
           name={item.icon}
@@ -55,10 +58,11 @@ export function WeatherForecastViewWidget() {
       </header>
 
       <div className="forecast-view__content">
-        {patchetForecast.map((item) => (
+        {patchetForecast.map((item, index) => (
           <ForecastItem
             key={item.date}
             item={item}
+            index={index}
           />
         ))}
       </div>

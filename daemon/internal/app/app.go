@@ -345,6 +345,27 @@ func (a *App) registerHandlers() {
 		},
 	)
 
+	// The hourly chime only lights a display that is off, typically one the
+	// idle countdown put to sleep. A lit screen is left alone so the chime
+	// neither interrupts the screensaver nor restarts the idle countdown.
+	// Waking publishes a state change, which restarts the countdown, so the
+	// display goes back to sleep after the usual idle period.
+	a.bus.Subscribe(
+		events.EventScheduleHourly,
+		func(event events.Event) {
+			if a.display.State() != display.StateOff {
+				return
+			}
+
+			if err := a.display.Wake(); err != nil {
+				log.Printf(
+					"failed to wake display on the hour: %v",
+					err,
+				)
+			}
+		},
+	)
+
 	a.bus.Subscribe(
 		events.EventScheduleOff,
 		func(event events.Event) {

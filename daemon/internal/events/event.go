@@ -6,8 +6,9 @@ const (
 	EventIdleTimeout Type = "idle.timeout"
 	EventIdleSleep   Type = "idle.sleep"
 
-	EventScheduleOn  Type = "schedule.on"
-	EventScheduleOff Type = "schedule.off"
+	EventScheduleOn     Type = "schedule.on"
+	EventScheduleOff    Type = "schedule.off"
+	EventScheduleHourly Type = "schedule.hourly"
 
 	EventPrinterStarted   Type = "printer.started"
 	EventPrinterCompleted Type = "printer.completed"

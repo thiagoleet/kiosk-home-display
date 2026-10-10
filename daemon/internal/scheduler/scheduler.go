@@ -36,6 +36,10 @@ type Scheduler struct {
 	// display into the right state.
 	published events.Type
 
+	// chimed is the top of the hour last announced with EventScheduleHourly,
+	// so the sixty ticks that land inside that minute announce it only once.
+	chimed time.Time
+
 	stop chan struct{}
 	done chan struct{}
 
@@ -122,20 +126,47 @@ func (s *Scheduler) check() {
 		return
 	}
 
+	now := s.clock().In(s.location)
+	inside := s.displayShouldBeOn(now)
+
 	desired := events.EventScheduleOff
 
-	if s.displayShouldBeOn(s.clock().In(s.location)) {
+	if inside {
 		desired = events.EventScheduleOn
 	}
 
-	if desired == s.published {
+	if desired != s.published {
+		s.published = desired
+
+		s.bus.Publish(events.Event{
+			Type: desired,
+		})
+	}
+
+	if inside {
+		s.chime(now)
+	}
+}
+
+// chime announces each full hour inside the on window, so a display the idle
+// countdown put to sleep lights up again on the hour. Only the top-of-hour
+// minute counts: a tick that misses it skips that hour rather than waking the
+// screen at an arbitrary time.
+func (s *Scheduler) chime(now time.Time) {
+	if now.Minute() != 0 {
 		return
 	}
 
-	s.published = desired
+	hour := now.Truncate(time.Minute)
+
+	if hour.Equal(s.chimed) {
+		return
+	}
+
+	s.chimed = hour
 
 	s.bus.Publish(events.Event{
-		Type: desired,
+		Type: events.EventScheduleHourly,
 	})
 }
 

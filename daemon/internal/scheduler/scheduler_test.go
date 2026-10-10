@@ -266,3 +266,123 @@ func TestSchedulerStaysQuietOnMalformedSchedule(t *testing.T) {
 		)
 	}
 }
+
+// Every tick inside the top-of-hour minute sees minute zero; the hour must be
+// announced once, and again at the next full hour.
+func TestSchedulerChimesOncePerFullHourInsideWindow(t *testing.T) {
+	bus := events.NewBus()
+
+	eventCount := 0
+
+	bus.Subscribe(events.EventScheduleHourly, func(event events.Event) {
+		eventCount++
+	})
+
+	location := time.UTC
+
+	scheduler := New(
+		bus,
+		Schedule{
+			On:  "07:00",
+			Off: "23:00",
+		},
+		location,
+	)
+
+	now := time.Date(
+		2026,
+		time.August,
+		18,
+		10,
+		0,
+		0,
+		0,
+		location,
+	)
+
+	scheduler.clock = func() time.Time {
+		return now
+	}
+
+	scheduler.check()
+
+	now = now.Add(30 * time.Second)
+
+	scheduler.check()
+
+	now = now.Add(time.Minute)
+
+	scheduler.check()
+
+	if eventCount != 1 {
+		t.Fatalf(
+			"expected 1 event within the hour, got %d",
+			eventCount,
+		)
+	}
+
+	now = time.Date(
+		2026,
+		time.August,
+		18,
+		11,
+		0,
+		15,
+		0,
+		location,
+	)
+
+	scheduler.check()
+
+	if eventCount != 2 {
+		t.Fatalf(
+			"expected 2 events after the next hour, got %d",
+			eventCount,
+		)
+	}
+}
+
+func TestSchedulerDoesNotChimeOutsideWindow(t *testing.T) {
+	bus := events.NewBus()
+
+	eventCount := 0
+
+	bus.Subscribe(events.EventScheduleHourly, func(event events.Event) {
+		eventCount++
+	})
+
+	location := time.UTC
+
+	scheduler := New(
+		bus,
+		Schedule{
+			On:  "07:00",
+			Off: "23:00",
+		},
+		location,
+	)
+
+	for _, hour := range []int{23, 2, 6} {
+		scheduler.clock = func() time.Time {
+			return time.Date(
+				2026,
+				time.August,
+				18,
+				hour,
+				0,
+				0,
+				0,
+				location,
+			)
+		}
+
+		scheduler.check()
+	}
+
+	if eventCount != 0 {
+		t.Fatalf(
+			"expected no events, got %d",
+			eventCount,
+		)
+	}
+}

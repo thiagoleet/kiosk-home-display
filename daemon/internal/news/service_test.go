@@ -3,6 +3,7 @@ package news
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -765,6 +766,48 @@ func TestSyncSourcesDisablesRemovedSources(t *testing.T) {
 
 	if len(enabled) != 1 || enabled[0].Name != "B" {
 		t.Fatalf("enabled = %+v", enabled)
+	}
+}
+
+func TestListWithoutSourcesIsAnEmptyList(t *testing.T) {
+	repository := openTestRepository(t)
+	fetcher := newStubFetcher()
+
+	fetcher.articles[sourceA.FeedURL] = feedArticles(sourceA, "a", 3, base, time.Minute)
+
+	// A had been configured and refreshed before NEWS_SOURCES was emptied.
+	service := newTestService(t, repository, fetcher, Config{
+		Sources: []Source{sourceA},
+	})
+
+	service.Refresh(context.Background())
+
+	service = newTestService(t, repository, fetcher, Config{})
+
+	feed := list(t, service, 20)
+
+	body, err := json.Marshal(feed)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	const want = `{"articles":[],"updatedAt":null,"sources":[]}`
+
+	if string(body) != want {
+		t.Fatalf("body = %s, want %s", body, want)
+	}
+}
+
+func TestListOnAFreshDatabaseWithoutSources(t *testing.T) {
+	service := newTestService(t, openTestRepository(t), newStubFetcher(), Config{})
+
+	body, err := json.Marshal(list(t, service, 20))
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	if string(body) != `{"articles":[],"updatedAt":null,"sources":[]}` {
+		t.Fatalf("body = %s", body)
 	}
 }
 

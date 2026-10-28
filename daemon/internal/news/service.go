@@ -238,5 +238,16 @@ func (s *Service) List(
 		limit = s.config.Retention.Total
 	}
 
-	return s.repository.Snapshot(ctx, limit)
+	feed, err := s.repository.Snapshot(ctx, limit)
+	if err != nil {
+		return Feed{}, err
+	}
+
+	// With no source enabled the stored update time belongs to sources that
+	// are gone, and would date an empty list.
+	if len(feed.Sources) == 0 {
+		feed.UpdatedAt = nil
+	}
+
+	return feed, nil
 }

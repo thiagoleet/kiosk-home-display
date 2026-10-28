@@ -221,24 +221,27 @@ because the daemon resolves it relative to the working directory.
 
 ### News feed
 
-The news slideshow is off unless the env file turns it on. A box installed
-before the feature existed keeps its env file across updates, so it has no
-`NEWS_*` lines at all and the daemon runs with the defaults below — news off.
+News is on by default. A box installed before the feature existed keeps its
+env file across updates, so it has no `NEWS_*` lines: it runs with news on and
+no sources, and `GET /api/news` answers an empty list —
+`{"articles":[],"updatedAt":null,"sources":[]}` — without collecting anything.
 
-To turn it on, add these two to `/etc/kiosk-home-display/kiosk.env` by hand
-(or push the template with `KIOSK_ENV_OVERWRITE=true`, which also replaces any
-other hand-tuned value) and restart the service:
+To give it feeds, add `NEWS_SOURCES` to `/etc/kiosk-home-display/kiosk.env` by
+hand (or push the template with `KIOSK_ENV_OVERWRITE=true`, which also replaces
+any other hand-tuned value) and restart the service:
 
 ```sh
-NEWS_ENABLED=true
 NEWS_SOURCES=G1|https://g1.globo.com/rss/g1/|general;NASA|https://www.nasa.gov/feed/|science
 ```
 
-`NEWS_ENABLED=true` without `NEWS_SOURCES` is a configuration error, and the
-daemon refuses to start. Every other setting is optional:
+A box whose env file came from the first news template has `NEWS_ENABLED=false`
+written in it, and keeps news off until that line is changed or removed. With
+news off the endpoint answers 503. Every other setting is optional:
 
 | Variable | Default | Meaning |
 |---|---|---|
+| `NEWS_ENABLED` | `true` | `false` switches news off |
+| `NEWS_SOURCES` | empty | Feeds; empty serves an empty list |
 | `NEWS_FETCH_INTERVAL` | `20m` | How often feeds are collected, in the background |
 | `NEWS_FETCH_TIMEOUT` | `10s` | Per feed; a feed that fails keeps its articles |
 | `NEWS_MAX_ARTICLES_PER_FETCH` | `30` | Newest items stored from one fetch of one feed |

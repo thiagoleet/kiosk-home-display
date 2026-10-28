@@ -476,3 +476,33 @@ func TestLoadRejectsInvalidNewsSettings(t *testing.T) {
 		})
 	}
 }
+
+func TestNewsIsEnabledByDefaultWithoutSources(t *testing.T) {
+	config, err := Load()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !config.News.Enabled {
+		t.Fatal("expected news to be enabled by default")
+	}
+
+	if len(config.News.Sources) != 0 {
+		t.Fatalf("expected no default sources, got %+v", config.News.Sources)
+	}
+}
+
+func TestLoadAcceptsNewsDisabled(t *testing.T) {
+	t.Setenv("NEWS_ENABLED", "false")
+
+	config, err := Load()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if config.News.Enabled {
+		t.Fatal("expected NEWS_ENABLED=false to switch news off")
+	}
+}

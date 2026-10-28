@@ -8,7 +8,18 @@ import (
 	"github.com/thiagoleet/kiosk-home-display/internal/config"
 )
 
+// isolateDatabase moves the test into an empty directory. New opens the
+// database at the relative path ./data/kiosk.db, which would otherwise be
+// created, and migrated, inside this package's source directory.
+func isolateDatabase(t *testing.T) {
+	t.Helper()
+
+	t.Chdir(t.TempDir())
+}
+
 func TestAppStopsWhenContextIsCancelled(t *testing.T) {
+	isolateDatabase(t)
+
 	application, err := New(config.Default())
 	if err != nil {
 		t.Fatalf("failed to create application: %v", err)
@@ -36,6 +47,8 @@ func TestAppStopsWhenContextIsCancelled(t *testing.T) {
 }
 
 func TestAppStartsWithLinuxDisplayMode(t *testing.T) {
+	isolateDatabase(t)
+
 	cfg := config.Default()
 	cfg.Display.Mode = "linux"
 

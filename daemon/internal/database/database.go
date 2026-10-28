@@ -21,7 +21,14 @@ func Open(config Config) (*Database, error) {
 		)
 	}
 
-	db, err := sql.Open("sqlite", config.Path)
+	// The pool holds several connections to the same file, and SQLite refuses
+	// a write outright while another connection is reading unless it is told
+	// to wait. Without the timeout an activity or a news refresh that lands
+	// during a read fails with SQLITE_BUSY instead of waiting a few ms.
+	db, err := sql.Open(
+		"sqlite",
+		config.Path+"?_pragma=busy_timeout(5000)",
+	)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to open database: %w",

@@ -3,6 +3,8 @@ package database
 import (
 	"database/sql"
 	"fmt"
+
+	"github.com/thiagoleet/kiosk-home-display/internal/news"
 )
 
 func Migrate(db *sql.DB) error {
@@ -23,6 +25,13 @@ func Migrate(db *sql.DB) error {
 	if _, err := db.Exec(query); err != nil {
 		return fmt.Errorf(
 			"failed to migrate database: %w",
+			err,
+		)
+	}
+
+	if err := news.Migrate(db); err != nil {
+		return fmt.Errorf(
+			"failed to migrate news tables: %w",
 			err,
 		)
 	}

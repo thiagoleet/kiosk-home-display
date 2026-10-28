@@ -1,6 +1,9 @@
 .DS_Store
 
 # SQLite
-daemon/data/*.db
-daemon/data/*.db-shm
-daemon/data/*.db-wal
+# Databases are created at ./data/kiosk.db relative to wherever the daemon, or
+# a test, runs from. None of them belong in git.
+**/data/*.db
+**/data/*.db-shm
+**/data/*.db-wal
+**/data/*.db-journal

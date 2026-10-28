@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/thiagoleet/kiosk-home-display/internal/news"
 )
 
 type Config struct {
@@ -16,6 +18,7 @@ type Config struct {
 	Activity  ActivityConfig
 	Printer   PrinterConfig
 	Weather   WeatherConfig
+	News      NewsConfig
 }
 
 type HTTPConfig struct {
@@ -67,6 +70,31 @@ type WeatherConfig struct {
 	ForecastDays    int
 }
 
+// FetchInterval and FetchTimeout govern the background collection, which never
+// blocks startup. MaxPerFetch caps what one fetch of one feed may store.
+// DisplayLimit is what GET /api/news returns by default. RetentionPerSource is
+// how many articles each source keeps and Retention caps all sources together,
+// cutting every source's oldest articles before any source's newest.
+// DisabledSourceGrace is how long the articles of a source removed from
+// NEWS_SOURCES survive, unlisted, in case it is configured again. Timezone is
+// assumed for feed dates that carry none.
+//
+// News is enabled by default; without sources it serves an empty list.
+// Sources still come from NEWS_SOURCES. Moving them into SQLite, leaving only
+// operational settings in the environment, is a pending decision.
+type NewsConfig struct {
+	Enabled             bool
+	Sources             []news.Source
+	FetchInterval       time.Duration
+	FetchTimeout        time.Duration
+	MaxPerFetch         int
+	DisplayLimit        int
+	RetentionPerSource  int
+	Retention           int
+	DisabledSourceGrace time.Duration
+	Timezone            string
+}
+
 func Default() Config {
 	return Config{
 		HTTP: HTTPConfig{
@@ -107,6 +135,17 @@ func Default() Config {
 			Timezone:        "America/Sao_Paulo",
 			CacheTTL:        5 * time.Minute,
 			ForecastDays:    5,
+		},
+		News: NewsConfig{
+			Enabled:             true,
+			FetchInterval:       20 * time.Minute,
+			FetchTimeout:        10 * time.Second,
+			MaxPerFetch:         30,
+			DisplayLimit:        20,
+			RetentionPerSource:  30,
+			Retention:           100,
+			DisabledSourceGrace: 7 * 24 * time.Hour,
+			Timezone:            "America/Sao_Paulo",
 		},
 	}
 }
@@ -216,6 +255,62 @@ func (c Config) Validate() error {
 		if c.Weather.ForecastDays < 1 || c.Weather.ForecastDays > 16 {
 			return fmt.Errorf(
 				"weather forecast days must be between 1 and 16",
+			)
+		}
+	}
+
+	// Checked even with news off: the startup cleanup of disabled sources
+	// runs either way.
+	if c.News.DisabledSourceGrace < 0 {
+		return fmt.Errorf(
+			"news disabled source grace cannot be negative",
+		)
+	}
+
+	// No sources is valid: news stays enabled and the endpoint serves an empty
+	// list until NEWS_SOURCES names some.
+	if c.News.Enabled {
+		if c.News.FetchInterval < time.Minute {
+			return fmt.Errorf(
+				"news fetch interval must be at least one minute",
+			)
+		}
+
+		if c.News.FetchTimeout <= 0 {
+			return fmt.Errorf(
+				"news fetch timeout must be greater than zero",
+			)
+		}
+
+		if c.News.MaxPerFetch < 1 {
+			return fmt.Errorf(
+				"news max articles per fetch must be greater than zero",
+			)
+		}
+
+		if c.News.DisplayLimit < 1 {
+			return fmt.Errorf(
+				"news display limit must be greater than zero",
+			)
+		}
+
+		if c.News.RetentionPerSource < 1 {
+			return fmt.Errorf(
+				"news retention per source must be greater than zero",
+			)
+		}
+
+		if c.News.Retention < c.News.DisplayLimit {
+			return fmt.Errorf(
+				"news retention must be at least the display limit",
+			)
+		}
+
+		if _, err := time.LoadLocation(c.News.Timezone); err != nil {
+			return fmt.Errorf(
+				"invalid news timezone %q: %w",
+				c.News.Timezone,
+				err,
 			)
 		}
 	}
@@ -464,6 +559,122 @@ func Load() (Config, error) {
 		}
 
 		config.Weather.ForecastDays = forecastDays
+	}
+
+	if value := os.Getenv("NEWS_ENABLED"); value != "" {
+		enabled, err := strconv.ParseBool(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_ENABLED: %w",
+				err,
+			)
+		}
+
+		config.News.Enabled = enabled
+	}
+
+	if value := os.Getenv("NEWS_SOURCES"); value != "" {
+		sources, err := news.ParseSources(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_SOURCES: %w",
+				err,
+			)
+		}
+
+		config.News.Sources = sources
+	}
+
+	if value := os.Getenv("NEWS_FETCH_INTERVAL"); value != "" {
+		interval, err := time.ParseDuration(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_FETCH_INTERVAL: %w",
+				err,
+			)
+		}
+
+		config.News.FetchInterval = interval
+	}
+
+	if value := os.Getenv("NEWS_FETCH_TIMEOUT"); value != "" {
+		timeout, err := time.ParseDuration(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_FETCH_TIMEOUT: %w",
+				err,
+			)
+		}
+
+		config.News.FetchTimeout = timeout
+	}
+
+	if value := os.Getenv("NEWS_MAX_ARTICLES_PER_FETCH"); value != "" {
+		limit, err := strconv.Atoi(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_MAX_ARTICLES_PER_FETCH: %w",
+				err,
+			)
+		}
+
+		config.News.MaxPerFetch = limit
+	}
+
+	if value := os.Getenv("NEWS_DISPLAY_LIMIT"); value != "" {
+		limit, err := strconv.Atoi(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_DISPLAY_LIMIT: %w",
+				err,
+			)
+		}
+
+		config.News.DisplayLimit = limit
+	}
+
+	if value := os.Getenv("NEWS_RETENTION"); value != "" {
+		retention, err := strconv.Atoi(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_RETENTION: %w",
+				err,
+			)
+		}
+
+		config.News.Retention = retention
+	}
+
+	if value := os.Getenv("NEWS_RETENTION_PER_SOURCE"); value != "" {
+		retention, err := strconv.Atoi(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_RETENTION_PER_SOURCE: %w",
+				err,
+			)
+		}
+
+		config.News.RetentionPerSource = retention
+	}
+
+	if value := os.Getenv("NEWS_DISABLED_SOURCE_GRACE"); value != "" {
+		grace, err := time.ParseDuration(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_DISABLED_SOURCE_GRACE: %w",
+				err,
+			)
+		}
+
+		config.News.DisabledSourceGrace = grace
+	}
+
+	// Feed dates without a zone are read in the box's own timezone unless one
+	// is set for news specifically.
+	if value := os.Getenv("NEWS_TIMEZONE"); value != "" {
+		config.News.Timezone = value
+	} else {
+		config.News.Timezone = config.Scheduler.Timezone
 	}
 
 	if err := config.Validate(); err != nil {

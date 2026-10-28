@@ -197,17 +197,32 @@ func New(cfg config.Config) (*App, error) {
 		cfg.Weather.ForecastDays,
 	)
 
+	// Validate has already checked the zone when news is enabled; a disabled
+	// feature with a bad zone must not keep the daemon from starting.
+	newsLocation, err := time.LoadLocation(
+		cfg.News.Timezone,
+	)
+	if err != nil {
+		newsLocation = time.UTC
+	}
+
 	newsService := news.NewService(
 		news.NewSQLiteRepository(db.DB),
 		news.NewHTTPFetcher(
 			nil,
 			cfg.News.FetchTimeout,
+			newsLocation,
 		),
 		news.Config{
 			Enabled:      cfg.News.Enabled,
 			Sources:      cfg.News.Sources,
 			DisplayLimit: cfg.News.DisplayLimit,
-			Retention:    cfg.News.Retention,
+			MaxPerFetch:  cfg.News.MaxPerFetch,
+			Retention: news.Retention{
+				PerSource:     cfg.News.RetentionPerSource,
+				Total:         cfg.News.Retention,
+				DisabledGrace: cfg.News.DisabledSourceGrace,
+			},
 		},
 	)
 

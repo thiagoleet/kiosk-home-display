@@ -19,23 +19,48 @@ type Article struct {
 	ImageURL    string    `json:"imageUrl,omitempty"`
 	URL         string    `json:"url"`
 	PublishedAt time.Time `json:"publishedAt"`
+
+	// CanonicalURL is the normalised link. Two sources carrying the same story
+	// store a row each, and the listing shows only one of them.
+	CanonicalURL string `json:"-"`
 }
 
-// Feed is what the slideshow reads. UpdatedAt is the last successful fetch of
-// any enabled source, nil until one has ever succeeded, so the frontend can
-// tell stale content apart from a fresh poll of the endpoint.
+// Feed is what the slideshow reads, taken from a single read transaction so
+// the articles, the update time and the source statuses agree with each other.
+//
+// UpdatedAt is when the last refresh cycle in which at least one source was
+// fetched successfully completed. It is nil until that has ever happened, so
+// the frontend can tell stale content apart from a fresh poll of the endpoint.
 type Feed struct {
-	Articles  []Article  `json:"articles"`
-	UpdatedAt *time.Time `json:"updatedAt"`
+	Articles  []Article      `json:"articles"`
+	UpdatedAt *time.Time     `json:"updatedAt"`
+	Sources   []SourceStatus `json:"sources"`
+}
+
+// Source statuses as the frontend sees them. The error text itself stays in
+// the database and the journal: it names hosts and resolver details the kiosk
+// has no use for.
+const (
+	SourceStatusOK      = "ok"
+	SourceStatusError   = "error"
+	SourceStatusPending = "pending"
+)
+
+type SourceStatus struct {
+	Name          string     `json:"name"`
+	Category      string     `json:"category"`
+	Status        string     `json:"status"`
+	LastSuccessAt *time.Time `json:"lastSuccessAt"`
 }
 
 // articleID derives an identifier that survives successive fetches of the same
 // feed, so a story that is still listed an hour later updates its row instead
 // of appearing twice.
 //
-// The GUID is preferred, scoped to the feed because many feeds number their
-// items with short values that would collide across sources. Without one the
-// normalised link stands in, unscoped, since a URL is already unique.
+// Both keys are scoped to the feed. GUIDs need it because many feeds number
+// their items with short values that would collide across sources. Links need
+// it so that a story two sources share is owned by each of them: disabling one
+// source must not take the other's copy with it.
 func articleID(
 	feedURL string,
 	guid string,
@@ -48,7 +73,7 @@ func articleID(
 		key = "guid:" + feedURL + "\n" + guid
 
 	case link != "":
-		key = "url:" + normalizeURL(link)
+		key = "url:" + feedURL + "\n" + normalizeURL(link)
 
 	default:
 		return ""
@@ -109,4 +134,41 @@ func httpURL(raw string) string {
 	}
 
 	return raw
+}
+
+// resolveURL turns a link from a feed into an absolute http or https URL.
+// Relative and protocol-relative references are resolved against base, which
+// is the feed's own URL, an xml:base, or the article page; without a base, or
+// when the result is any other scheme, the link is dropped.
+func resolveURL(base *url.URL, raw string) string {
+	raw = strings.TrimSpace(raw)
+
+	if raw == "" {
+		return ""
+	}
+
+	reference, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+
+	if base != nil {
+		reference = base.ResolveReference(reference)
+	}
+
+	return httpURL(reference.String())
+}
+
+// parseBase parses a resolved URL for use as the base of further references.
+func parseBase(raw string) *url.URL {
+	if raw == "" {
+		return nil
+	}
+
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return nil
+	}
+
+	return parsed
 }

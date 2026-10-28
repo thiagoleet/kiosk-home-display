@@ -8,6 +8,7 @@ import (
 	"html"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -32,13 +33,17 @@ type Fetcher interface {
 }
 
 type HTTPFetcher struct {
-	client *http.Client
-	clock  func() time.Time
+	client   *http.Client
+	location *time.Location
+	clock    func() time.Time
 }
 
+// location is the zone assumed for feed dates that carry none, and for zone
+// abbreviations that cannot be mapped to an offset.
 func NewHTTPFetcher(
 	client *http.Client,
 	timeout time.Duration,
+	location *time.Location,
 ) *HTTPFetcher {
 	if client == nil {
 		client = &http.Client{
@@ -46,9 +51,14 @@ func NewHTTPFetcher(
 		}
 	}
 
+	if location == nil {
+		location = time.UTC
+	}
+
 	return &HTTPFetcher{
-		client: client,
-		clock:  time.Now,
+		client:   client,
+		location: location,
+		clock:    time.Now,
 	}
 }
 
@@ -92,11 +102,23 @@ func (f *HTTPFetcher) Fetch(
 		)
 	}
 
+	// Relative links resolve against where the feed was finally served from,
+	// after any redirect.
 	return parseFeed(
 		io.LimitReader(response.Body, maxFeedSize),
 		source,
-		f.clock(),
+		parseOptions{
+			base:     response.Request.URL,
+			location: f.location,
+			now:      f.clock(),
+		},
 	)
+}
+
+type parseOptions struct {
+	base     *url.URL
+	location *time.Location
+	now      time.Time
 }
 
 // The three dialects share enough element names that a single set of structs
@@ -104,6 +126,7 @@ func (f *HTTPFetcher) Fetch(
 // them beside it, and Atom calls them entries.
 type xmlFeed struct {
 	XMLName xml.Name
+	Base    string `xml:"http://www.w3.org/XML/1998/namespace base,attr"`
 	Channel struct {
 		Items []xmlEntry `xml:"item"`
 	} `xml:"channel"`
@@ -112,6 +135,7 @@ type xmlFeed struct {
 }
 
 type xmlEntry struct {
+	Base         string    `xml:"http://www.w3.org/XML/1998/namespace base,attr"`
 	Titles       []xmlText `xml:"title"`
 	Links        []xmlLink `xml:"link"`
 	GUIDs        []xmlText `xml:"guid"`
@@ -171,8 +195,12 @@ const (
 func parseFeed(
 	reader io.Reader,
 	source Source,
-	now time.Time,
+	options parseOptions,
 ) ([]Article, error) {
+	if options.location == nil {
+		options.location = time.UTC
+	}
+
 	decoder := xml.NewDecoder(reader)
 
 	// Feeds in the wild are often not well formed: HTML entities such as
@@ -214,10 +242,22 @@ func parseFeed(
 		)
 	}
 
+	// Atom may set xml:base on the feed and again on each entry, each one
+	// relative to the one above it.
+	if options.base == nil {
+		options.base = parseBase(httpURL(source.FeedURL))
+	}
+
+	if feed.Base != "" {
+		if feedBase := parseBase(resolveURL(options.base, feed.Base)); feedBase != nil {
+			options.base = feedBase
+		}
+	}
+
 	articles := make([]Article, 0, len(entries))
 
 	for _, entry := range entries {
-		article, ok := normalizeEntry(entry, source, now)
+		article, ok := normalizeEntry(entry, source, options)
 		if !ok {
 			continue
 		}
@@ -231,10 +271,18 @@ func parseFeed(
 func normalizeEntry(
 	entry xmlEntry,
 	source Source,
-	now time.Time,
+	options parseOptions,
 ) (Article, bool) {
+	base := options.base
+
+	if entry.Base != "" {
+		if entryBase := parseBase(resolveURL(base, entry.Base)); entryBase != nil {
+			base = entryBase
+		}
+	}
+
 	title := cleanText(ownText(entry.Titles))
-	link := httpURL(entryLink(entry))
+	link := resolveURL(base, entryLink(entry))
 
 	if title == "" || link == "" {
 		return Article{}, false
@@ -266,25 +314,31 @@ func normalizeEntry(
 		description = body
 	}
 
-	imageURL := entryImage(entry)
+	// Media elements are part of the feed document and resolve against its
+	// base. An image inside the article HTML was written for the article page,
+	// so it resolves against that instead.
+	imageURL := resolveURL(base, entryImage(entry))
 
 	if imageURL == "" {
-		imageURL = firstImage(description)
-	}
+		page := parseBase(link)
 
-	if imageURL == "" {
-		imageURL = firstImage(body)
+		imageURL = resolveURL(page, firstImage(description))
+
+		if imageURL == "" {
+			imageURL = resolveURL(page, firstImage(body))
+		}
 	}
 
 	return Article{
-		ID:          articleID(source.FeedURL, guid, link),
-		Title:       title,
-		Summary:     truncate(cleanText(description), maxSummaryLength),
-		Source:      source.Name,
-		Category:    source.Category,
-		ImageURL:    httpURL(imageURL),
-		URL:         link,
-		PublishedAt: entryDate(entry, now),
+		ID:           articleID(source.FeedURL, guid, link),
+		Title:        title,
+		Summary:      truncate(cleanText(description), maxSummaryLength),
+		Source:       source.Name,
+		Category:     source.Category,
+		ImageURL:     imageURL,
+		URL:          link,
+		PublishedAt:  entryDate(entry, options.location, options.now),
+		CanonicalURL: normalizeURL(link),
 	}, true
 }
 
@@ -398,54 +452,135 @@ func firstImage(content string) string {
 	return html.UnescapeString(match[1])
 }
 
-var dateLayouts = []string{
-	time.RFC1123Z,
-	time.RFC1123,
-	time.RFC3339,
+// zonedLayouts carry their own offset. Zone abbreviations never reach them:
+// parseDate rewrites a known one as an offset first, because time.Parse would
+// otherwise read an abbreviation it does not know, such as BRT, as UTC.
+var zonedLayouts = []string{
 	time.RFC3339Nano,
 	"Mon, 2 Jan 2006 15:04:05 -0700",
-	"Mon, 2 Jan 2006 15:04:05 MST",
-	"Mon, 02 Jan 2006 15:04 -0700",
+	"Mon, 2 Jan 2006 15:04:05 -07:00",
 	"Mon, 2 Jan 2006 15:04 -0700",
-	"02 Jan 2006 15:04:05 -0700",
 	"2 Jan 2006 15:04:05 -0700",
-	time.RFC822Z,
-	time.RFC822,
-	"2006-01-02T15:04:05-07:00",
+	"2 Jan 2006 15:04 -0700",
+	"2 Jan 06 15:04 -0700",
+	"2006-01-02T15:04:05-0700",
+	"2006-01-02 15:04:05 -0700",
+}
+
+// localLayouts carry no zone and are read in the configured location.
+var localLayouts = []string{
+	"Mon, 2 Jan 2006 15:04:05",
+	"Mon, 2 Jan 2006 15:04",
+	"2 Jan 2006 15:04:05",
 	"2006-01-02T15:04:05",
+	"2006-01-02T15:04",
 	"2006-01-02 15:04:05",
 	"2006-01-02",
+}
+
+// zoneOffsets maps the abbreviations found in feed dates to offsets. RFC 822
+// defines the North American and military ones; the Brazilian ones are what
+// local portals emit. Ambiguous abbreviations such as IST or CST outside the
+// RFC list are left out on purpose and fall back to the configured location.
+var zoneOffsets = map[string]string{
+	"UT":   "+0000",
+	"UTC":  "+0000",
+	"GMT":  "+0000",
+	"Z":    "+0000",
+	"EST":  "-0500",
+	"EDT":  "-0400",
+	"CST":  "-0600",
+	"CDT":  "-0500",
+	"MST":  "-0700",
+	"MDT":  "-0600",
+	"PST":  "-0800",
+	"PDT":  "-0700",
+	"BRT":  "-0300",
+	"BRST": "-0200",
+	"AMT":  "-0400",
+	"FNT":  "-0200",
+	"WET":  "+0000",
+	"WEST": "+0100",
+	"CET":  "+0100",
+	"CEST": "+0200",
+}
+
+// parseDate reads the date formats feeds use in practice. A trailing zone
+// abbreviation is replaced by its offset when it is known and dropped when it
+// is not, in which case the date is read in location like a date with no zone.
+func parseDate(value string, location *time.Location) (time.Time, bool) {
+	value = strings.Join(strings.Fields(value), " ")
+
+	if value == "" {
+		return time.Time{}, false
+	}
+
+	if index := strings.LastIndex(value, " "); index > 0 {
+		zone := value[index+1:]
+
+		if isZoneAbbreviation(zone) {
+			if offset, ok := zoneOffsets[strings.ToUpper(zone)]; ok {
+				value = value[:index+1] + offset
+			} else {
+				value = value[:index]
+			}
+		}
+	}
+
+	for _, layout := range zonedLayouts {
+		if parsed, err := time.Parse(layout, value); err == nil {
+			return parsed, true
+		}
+	}
+
+	for _, layout := range localLayouts {
+		if parsed, err := time.ParseInLocation(layout, value, location); err == nil {
+			return parsed, true
+		}
+	}
+
+	return time.Time{}, false
+}
+
+func isZoneAbbreviation(value string) bool {
+	if value == "" || len(value) > 5 {
+		return false
+	}
+
+	for _, r := range value {
+		if (r < 'A' || r > 'Z') && (r < 'a' || r > 'z') {
+			return false
+		}
+	}
+
+	return true
 }
 
 // entryDate returns the publication time, or the zero time when the feed gives
 // none, so the repository can fall back to when the article was first seen.
 // A date in the future is clamped: feeds with a wrong timezone would otherwise
 // pin their stories to the top of the slideshow for hours.
-func entryDate(entry xmlEntry, now time.Time) time.Time {
+func entryDate(
+	entry xmlEntry,
+	location *time.Location,
+	now time.Time,
+) time.Time {
 	for _, value := range []string{
 		entry.PubDate,
 		entry.Published,
 		entry.DCDate,
 		entry.Updated,
 	} {
-		value = strings.TrimSpace(value)
-
-		if value == "" {
+		parsed, ok := parseDate(value, location)
+		if !ok {
 			continue
 		}
 
-		for _, layout := range dateLayouts {
-			parsed, err := time.Parse(layout, value)
-			if err != nil {
-				continue
-			}
-
-			if parsed.After(now) {
-				return now
-			}
-
-			return parsed
+		if parsed.After(now) {
+			return now
 		}
+
+		return parsed
 	}
 
 	return time.Time{}

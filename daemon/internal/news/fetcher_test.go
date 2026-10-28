@@ -19,6 +19,25 @@ var testSource = Source{
 
 var testNow = time.Date(2026, 10, 27, 19, 0, 0, 0, time.UTC)
 
+var saoPaulo = mustLoadLocation("America/Sao_Paulo")
+
+func mustLoadLocation(name string) *time.Location {
+	location, err := time.LoadLocation(name)
+	if err != nil {
+		panic(err)
+	}
+
+	return location
+}
+
+func testOptions() parseOptions {
+	return parseOptions{
+		base:     parseBase(testSource.FeedURL),
+		location: saoPaulo,
+		now:      testNow,
+	}
+}
+
 func TestParseRSS2(t *testing.T) {
 	const feed = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -40,7 +59,7 @@ func TestParseRSS2(t *testing.T) {
 </channel>
 </rss>`
 
-	articles, err := parseFeed(strings.NewReader(feed), testSource, testNow)
+	articles, err := parseFeed(strings.NewReader(feed), testSource, testOptions())
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -94,7 +113,7 @@ func TestParseAtom(t *testing.T) {
 	</entry>
 </feed>`
 
-	articles, err := parseFeed(strings.NewReader(feed), testSource, testNow)
+	articles, err := parseFeed(strings.NewReader(feed), testSource, testOptions())
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -134,7 +153,7 @@ func TestParseRDFInLatin1(t *testing.T) {
 		`<dc:date>2026-10-26T08:00:00Z</dc:date>` +
 		`</item></rdf:RDF>`
 
-	articles, err := parseFeed(strings.NewReader(feed), testSource, testNow)
+	articles, err := parseFeed(strings.NewReader(feed), testSource, testOptions())
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -160,7 +179,7 @@ func TestParseRejectsHTML(t *testing.T) {
 	_, err := parseFeed(
 		strings.NewReader(`<html><body>Not found</body></html>`),
 		testSource,
-		testNow,
+		testOptions(),
 	)
 
 	if !errors.Is(err, ErrNotAFeed) {
@@ -174,7 +193,7 @@ func TestParseClampsFutureDatesAndDropsUnsafeLinks(t *testing.T) {
 		<item><title>Script</title><link>javascript:alert(1)</link></item>
 	</channel></rss>`
 
-	articles, err := parseFeed(strings.NewReader(feed), testSource, testNow)
+	articles, err := parseFeed(strings.NewReader(feed), testSource, testOptions())
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -188,12 +207,23 @@ func TestParseClampsFutureDatesAndDropsUnsafeLinks(t *testing.T) {
 	}
 }
 
-func TestArticleIDFallsBackToNormalizedURL(t *testing.T) {
-	first := articleID("https://a/feed", "", "https://Example.com/x/?utm_source=a#top")
-	second := articleID("https://b/feed", "", "https://example.com/x")
+func TestArticleIDIsScopedToTheFeed(t *testing.T) {
+	link := "https://Example.com/x/?utm_source=a#top"
 
-	if first == "" || first != second {
-		t.Fatalf("expected equal ids, got %q and %q", first, second)
+	sameFeed := articleID("https://a/feed", "", "https://example.com/x")
+	first := articleID("https://a/feed", "", link)
+	second := articleID("https://b/feed", "", link)
+
+	if first == "" || first != sameFeed {
+		t.Fatalf("expected the normalised link to give the same id, got %q and %q", first, sameFeed)
+	}
+
+	if first == second {
+		t.Fatalf("expected different ids for the same link in two feeds")
+	}
+
+	if articleID("https://a/feed", "1", "") == articleID("https://b/feed", "1", "") {
+		t.Fatalf("expected guids to be scoped to the feed")
 	}
 }
 
@@ -205,7 +235,7 @@ func TestHTTPFetcherReportsStatus(t *testing.T) {
 	))
 	defer server.Close()
 
-	fetcher := NewHTTPFetcher(nil, time.Second)
+	fetcher := NewHTTPFetcher(nil, time.Second, time.UTC)
 
 	_, err := fetcher.Fetch(
 		context.Background(),
@@ -242,5 +272,137 @@ func TestParseSources(t *testing.T) {
 		if _, err := ParseSources(invalid); err == nil {
 			t.Errorf("expected %q to be rejected", invalid)
 		}
+	}
+}
+
+func TestParseResolvesRelativeURLs(t *testing.T) {
+	const feed = `<rss xmlns:media="http://search.yahoo.com/mrss/"><channel>
+		<item>
+			<title>Relativo</title>
+			<link>/noticias/relativo</link>
+			<description><![CDATA[<img src="../img/foto.jpg"> Texto]]></description>
+		</item>
+		<item>
+			<title>Protocolo</title>
+			<link>https://example.com/noticias/protocolo</link>
+			<media:thumbnail url="//cdn.example.com/thumb.jpg"/>
+		</item>
+		<item>
+			<title>Inseguro</title>
+			<link>https://example.com/noticias/inseguro</link>
+			<description><![CDATA[<img src="javascript:alert(1)"> <img src="data:image/png;base64,AAAA">]]></description>
+		</item>
+	</channel></rss>`
+
+	articles, err := parseFeed(strings.NewReader(feed), testSource, testOptions())
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	if len(articles) != 3 {
+		t.Fatalf("expected 3 articles, got %d", len(articles))
+	}
+
+	if articles[0].URL != "https://example.com/noticias/relativo" {
+		t.Errorf("link = %q", articles[0].URL)
+	}
+
+	// Inline HTML belongs to the article page, so it resolves against that.
+	if articles[0].ImageURL != "https://example.com/img/foto.jpg" {
+		t.Errorf("inline image = %q", articles[0].ImageURL)
+	}
+
+	if articles[1].ImageURL != "https://cdn.example.com/thumb.jpg" {
+		t.Errorf("protocol-relative image = %q", articles[1].ImageURL)
+	}
+
+	if articles[2].ImageURL != "" {
+		t.Errorf("unsafe image kept: %q", articles[2].ImageURL)
+	}
+}
+
+func TestParseAtomXMLBase(t *testing.T) {
+	const feed = `<feed xmlns="http://www.w3.org/2005/Atom" xml:base="https://blog.example.org/">
+		<entry xml:base="posts/">
+			<id>1</id>
+			<title>Base</title>
+			<link href="primeiro"/>
+		</entry>
+	</feed>`
+
+	articles, err := parseFeed(strings.NewReader(feed), testSource, testOptions())
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	if len(articles) != 1 || articles[0].URL != "https://blog.example.org/posts/primeiro" {
+		t.Fatalf("articles = %+v", articles)
+	}
+}
+
+func TestHTTPFetcherResolvesAgainstTheFinalURL(t *testing.T) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/old", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/new/feed.xml", http.StatusMovedPermanently)
+	})
+
+	mux.HandleFunc("/new/feed.xml", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`<rss><channel><item><title>T</title><link>artigo</link></item></channel></rss>`))
+	})
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	articles, err := NewHTTPFetcher(nil, time.Second, time.UTC).Fetch(
+		context.Background(),
+		Source{FeedURL: server.URL + "/old"},
+	)
+	if err != nil {
+		t.Fatalf("fetch: %v", err)
+	}
+
+	if len(articles) != 1 || articles[0].URL != server.URL+"/new/artigo" {
+		t.Fatalf("articles = %+v", articles)
+	}
+}
+
+func TestParseDate(t *testing.T) {
+	cases := []struct {
+		value string
+		want  time.Time
+	}{
+		{"Tue, 27 Oct 2026 18:30:00 +0000", time.Date(2026, 10, 27, 18, 30, 0, 0, time.UTC)},
+		{"Tue, 27 Oct 2026 18:30:00 GMT", time.Date(2026, 10, 27, 18, 30, 0, 0, time.UTC)},
+		{"Tue, 27 Oct 2026 15:30:00 BRT", time.Date(2026, 10, 27, 18, 30, 0, 0, time.UTC)},
+		{"Tue, 27 Oct 2026 14:30:00 EDT", time.Date(2026, 10, 27, 18, 30, 0, 0, time.UTC)},
+		{"Tue, 27 Oct 2026 15:30:00 -03:00", time.Date(2026, 10, 27, 18, 30, 0, 0, time.UTC)},
+		{"27 Oct 26 18:30 Z", time.Date(2026, 10, 27, 18, 30, 0, 0, time.UTC)},
+		{"2026-10-27T18:30:00Z", time.Date(2026, 10, 27, 18, 30, 0, 0, time.UTC)},
+		{"2026-10-27T15:30:00.123-03:00", time.Date(2026, 10, 27, 18, 30, 0, 123000000, time.UTC)},
+
+		// No zone, and a zone nobody can map: read in the configured location.
+		{"2026-10-27 15:30:00", time.Date(2026, 10, 27, 18, 30, 0, 0, time.UTC)},
+		{"Tue, 27 Oct 2026 15:30:00", time.Date(2026, 10, 27, 18, 30, 0, 0, time.UTC)},
+		{"Tue, 27 Oct 2026 15:30:00 XYZ", time.Date(2026, 10, 27, 18, 30, 0, 0, time.UTC)},
+		{"2026-10-27", time.Date(2026, 10, 27, 3, 0, 0, 0, time.UTC)},
+	}
+
+	for _, c := range cases {
+		got, ok := parseDate(c.value, saoPaulo)
+
+		if !ok {
+			t.Errorf("%q not parsed", c.value)
+
+			continue
+		}
+
+		if !got.Equal(c.want) {
+			t.Errorf("%q = %v, want %v", c.value, got.UTC(), c.want)
+		}
+	}
+
+	if _, ok := parseDate("ontem", saoPaulo); ok {
+		t.Errorf("expected garbage to be rejected")
 	}
 }

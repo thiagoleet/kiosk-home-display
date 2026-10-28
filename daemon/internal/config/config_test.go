@@ -419,3 +419,60 @@ func TestLoadRejectsMalformedScheduleTime(t *testing.T) {
 		t.Fatal("expected configuration error")
 	}
 }
+
+func TestLoadNewsSettings(t *testing.T) {
+	t.Setenv("NEWS_ENABLED", "true")
+	t.Setenv("NEWS_SOURCES", "G1|https://g1.globo.com/rss/g1/")
+	t.Setenv("TIMEZONE", "America/Manaus")
+	t.Setenv("NEWS_MAX_ARTICLES_PER_FETCH", "15")
+	t.Setenv("NEWS_RETENTION_PER_SOURCE", "25")
+	t.Setenv("NEWS_DISABLED_SOURCE_GRACE", "48h")
+
+	config, err := Load()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Without NEWS_TIMEZONE, feed dates follow the box's timezone.
+	if config.News.Timezone != "America/Manaus" {
+		t.Errorf("news timezone = %q", config.News.Timezone)
+	}
+
+	if config.News.MaxPerFetch != 15 ||
+		config.News.RetentionPerSource != 25 ||
+		config.News.DisabledSourceGrace != 48*time.Hour {
+		t.Errorf("news = %+v", config.News)
+	}
+
+	t.Setenv("NEWS_TIMEZONE", "UTC")
+
+	config, err = Load()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if config.News.Timezone != "UTC" {
+		t.Errorf("news timezone = %q, want the override", config.News.Timezone)
+	}
+}
+
+func TestLoadRejectsInvalidNewsSettings(t *testing.T) {
+	for name, value := range map[string]string{
+		"NEWS_MAX_ARTICLES_PER_FETCH": "0",
+		"NEWS_RETENTION_PER_SOURCE":   "0",
+		"NEWS_DISABLED_SOURCE_GRACE":  "-1h",
+		"NEWS_TIMEZONE":               "Nowhere/Invalid",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("NEWS_ENABLED", "true")
+			t.Setenv("NEWS_SOURCES", "G1|https://g1.globo.com/rss/g1/")
+			t.Setenv(name, value)
+
+			if _, err := Load(); err == nil {
+				t.Fatalf("expected %s=%s to be rejected", name, value)
+			}
+		})
+	}
+}

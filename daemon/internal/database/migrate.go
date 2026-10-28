@@ -29,7 +29,7 @@ func Migrate(db *sql.DB) error {
 		)
 	}
 
-	if _, err := db.Exec(news.Schema); err != nil {
+	if err := news.Migrate(db); err != nil {
 		return fmt.Errorf(
 			"failed to migrate news tables: %w",
 			err,

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"sync"
 	"time"
 )
@@ -16,10 +17,16 @@ type Config struct {
 	Sources []Source
 
 	// DisplayLimit is how many articles the endpoint returns when the caller
-	// does not ask for a number. Retention is how many stay in the database,
-	// and also caps what a caller may ask for.
+	// does not ask for a number. Retention.Total also caps what a caller may
+	// ask for, since the database holds no more than that.
 	DisplayLimit int
-	Retention    int
+
+	// MaxPerFetch is how many articles a single fetch of one feed may store,
+	// newest first. Portals that list a hundred items would otherwise write a
+	// hundred rows every cycle only for retention to delete most of them.
+	MaxPerFetch int
+
+	Retention Retention
 }
 
 type Service struct {
@@ -72,6 +79,10 @@ func (s *Service) Init(ctx context.Context) error {
 // Refresh fetches every enabled source once. Each source is isolated: a feed
 // that fails keeps the articles it already has, records its error, and does
 // not stop the others from updating.
+//
+// The update time advances only when at least one source succeeded. A cycle
+// cut short by shutdown ends silently: it records no failures, prunes
+// nothing and leaves the update time alone, and the next start fetches again.
 func (s *Service) Refresh(ctx context.Context) {
 	if !s.config.Enabled {
 		return
@@ -88,6 +99,10 @@ func (s *Service) Refresh(ctx context.Context) {
 		}
 
 		if err := s.refreshSource(ctx, source); err != nil {
+			if cancelled(ctx, err) {
+				return
+			}
+
 			log.Printf(
 				"[NEWS] %s: %v",
 				source.Name,
@@ -108,8 +123,23 @@ func (s *Service) Refresh(ctx context.Context) {
 		updated++
 	}
 
-	if err := s.repository.Prune(ctx, s.config.Retention); err != nil {
+	completedAt := s.clock()
+
+	if err := s.repository.Prune(
+		ctx,
+		s.config.Retention,
+		completedAt,
+	); err != nil && !cancelled(ctx, err) {
 		log.Printf("[NEWS] %v", err)
+	}
+
+	if updated > 0 {
+		if err := s.repository.MarkRefreshed(
+			ctx,
+			completedAt,
+		); err != nil && !cancelled(ctx, err) {
+			log.Printf("[NEWS] %v", err)
+		}
 	}
 
 	log.Printf(
@@ -130,10 +160,10 @@ func (s *Service) refreshSource(
 
 	fetchedAt := s.clock()
 
-	if err := s.repository.SaveArticles(
+	if err := s.repository.SaveFetch(
 		ctx,
 		source.ID,
-		articles,
+		newest(articles, s.config.MaxPerFetch),
 		fetchedAt,
 	); err != nil {
 		return fmt.Errorf(
@@ -142,12 +172,41 @@ func (s *Service) refreshSource(
 		)
 	}
 
-	return s.repository.MarkFetched(ctx, source.ID, fetchedAt)
+	return nil
 }
 
-// List returns the newest articles. A limit of zero or less means the
-// configured display limit, and anything beyond the retention is capped there
-// since the database holds no more than that.
+// newest keeps the limit most recent articles. Undated articles count as the
+// newest, since they are dated when first stored, and keep their feed order.
+func newest(articles []Article, limit int) []Article {
+	if limit <= 0 || len(articles) <= limit {
+		return articles
+	}
+
+	sorted := make([]Article, len(articles))
+	copy(sorted, articles)
+
+	sort.SliceStable(sorted, func(i, j int) bool {
+		left, right := sorted[i].PublishedAt, sorted[j].PublishedAt
+
+		if left.IsZero() || right.IsZero() {
+			return left.IsZero() && !right.IsZero()
+		}
+
+		return left.After(right)
+	})
+
+	return sorted[:limit]
+}
+
+// cancelled reports whether err only reflects the cycle being stopped, which
+// is not a fault of the source and must not be recorded as one.
+func cancelled(ctx context.Context, err error) bool {
+	return ctx.Err() != nil || errors.Is(err, context.Canceled)
+}
+
+// List returns the articles with the sources interleaved, the update time and
+// the status of each source. A limit of zero or less means the configured
+// display limit.
 func (s *Service) List(
 	ctx context.Context,
 	limit int,
@@ -160,22 +219,9 @@ func (s *Service) List(
 		limit = s.config.DisplayLimit
 	}
 
-	if limit > s.config.Retention {
-		limit = s.config.Retention
+	if limit > s.config.Retention.Total {
+		limit = s.config.Retention.Total
 	}
 
-	articles, err := s.repository.List(ctx, limit)
-	if err != nil {
-		return Feed{}, err
-	}
-
-	updatedAt, err := s.repository.UpdatedAt(ctx)
-	if err != nil {
-		return Feed{}, err
-	}
-
-	return Feed{
-		Articles:  articles,
-		UpdatedAt: updatedAt,
-	}, nil
+	return s.repository.Snapshot(ctx, limit)
 }

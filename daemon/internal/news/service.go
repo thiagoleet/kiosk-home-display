@@ -57,9 +57,22 @@ func (s *Service) Enabled() bool {
 	return s.config.Enabled
 }
 
-// Init writes the configured sources to the database and deletes the expired
-// articles of disabled sources. It touches no network, so it is safe to run
-// before the HTTP server starts.
+// HasSources reports whether Init found any source to collect.
+func (s *Service) HasSources() bool {
+	s.refreshing.Lock()
+	defer s.refreshing.Unlock()
+
+	return len(s.sources) > 0
+}
+
+// Init loads the sources to collect and deletes the expired articles of
+// disabled sources. It touches no network, so it is safe to run before the
+// HTTP server starts.
+//
+// NEWS_SOURCES, when set, decides the sources: they are written to the table
+// and every other source is disabled. When it is empty the table is left as it
+// is and its enabled sources are collected — on a new database, the defaults
+// the migration wrote.
 //
 // The cleanup runs even with news switched off, because then no refresh cycle
 // ever prunes. It is the only cleanup in that case, so articles expire at the
@@ -69,7 +82,17 @@ func (s *Service) Enabled() bool {
 // feature off is not taken as removing its sources.
 func (s *Service) Init(ctx context.Context) error {
 	if s.config.Enabled {
-		sources, err := s.repository.SyncSources(ctx, s.config.Sources)
+		var (
+			sources []Source
+			err     error
+		)
+
+		if len(s.config.Sources) > 0 {
+			sources, err = s.repository.SyncSources(ctx, s.config.Sources)
+		} else {
+			sources, err = s.repository.EnabledSources(ctx)
+		}
+
 		if err != nil {
 			return err
 		}

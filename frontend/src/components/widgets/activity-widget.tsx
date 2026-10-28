@@ -1,12 +1,12 @@
 import { Info, Monitor, Printer, Wifi, type LucideIcon } from "lucide-react";
 
+import type { Activity } from "@/types/activity";
 import type { NotificationContext } from "@/types/notification";
 
 import { useTranslation } from "@/hooks/use-translation";
-import { useActivities } from "@/hooks/use-activities";
 
 type ActivityWidgetProps = {
-  maxActivities?: number;
+  activities: Activity[];
 };
 
 const activityIcons: Record<NotificationContext, LucideIcon> = {
@@ -29,10 +29,8 @@ function formatTimestamp(timestamp: string, locale: string) {
   }).format(date);
 }
 
-export function ActivityWidget({ maxActivities }: ActivityWidgetProps) {
+export function ActivityWidget({ activities }: ActivityWidgetProps) {
   const { locale, t } = useTranslation();
-
-  const { activities } = useActivities({ maxActivities });
 
   return (
     <section className="widget activity-widget">

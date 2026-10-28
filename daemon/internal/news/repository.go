@@ -253,6 +253,7 @@ type Retention struct {
 
 type Repository interface {
 	SyncSources(ctx context.Context, sources []Source) ([]Source, error)
+	EnabledSources(ctx context.Context) ([]Source, error)
 	SaveFetch(ctx context.Context, sourceID int64, articles []Article, fetchedAt time.Time) error
 	MarkFailed(ctx context.Context, sourceID int64, message string) error
 	MarkRefreshed(ctx context.Context, completedAt time.Time) error
@@ -333,6 +334,14 @@ func (r *SQLiteRepository) SyncSources(
 		)
 	}
 
+	return r.enabledSources(ctx)
+}
+
+// EnabledSources returns the enabled sources as the table holds them, without
+// changing it. It is what the daemon collects when NEWS_SOURCES is not set.
+func (r *SQLiteRepository) EnabledSources(
+	ctx context.Context,
+) ([]Source, error) {
 	return r.enabledSources(ctx)
 }
 

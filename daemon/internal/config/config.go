@@ -79,9 +79,10 @@ type WeatherConfig struct {
 // NEWS_SOURCES survive, unlisted, in case it is configured again. Timezone is
 // assumed for feed dates that carry none.
 //
-// News is enabled by default; without sources it serves an empty list.
-// Sources still come from NEWS_SOURCES. Moving them into SQLite, leaving only
-// operational settings in the environment, is a pending decision.
+// News is enabled by default. NEWS_SOURCES, when set, decides the sources;
+// left empty, the daemon collects the sources enabled in the database, which a
+// new database starts with from a migration. With neither it serves an empty
+// list.
 type NewsConfig struct {
 	Enabled             bool
 	Sources             []news.Source
@@ -267,8 +268,8 @@ func (c Config) Validate() error {
 		)
 	}
 
-	// No sources is valid: news stays enabled and the endpoint serves an empty
-	// list until NEWS_SOURCES names some.
+	// No sources is valid: the daemon then uses the sources enabled in the
+	// database, and serves an empty list if there are none.
 	if c.News.Enabled {
 		if c.News.FetchInterval < time.Minute {
 			return fmt.Errorf(

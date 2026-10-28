@@ -219,29 +219,100 @@ window.
 The SQLite database lives at `/var/lib/kiosk-home-display/data/kiosk.db`,
 because the daemon resolves it relative to the working directory.
 
+### Database migrations
+
+Migrations run automatically every time the daemon starts, before any service
+reads the database; there is no separate command to run. An update therefore
+migrates the database when the installer restarts the service. They touch no
+network, so a box offline at boot migrates just the same.
+
+There are two kinds, both in `daemon/internal/database/migrate.go`:
+
+- **Schema**: the tables, indexes and added columns. Written so they can run on
+  every start (`CREATE TABLE IF NOT EXISTS`, a column is added only when
+  missing), they create a fresh database and bring an older one up to date.
+- **Steps**: data changes that must happen once. The database counts the steps
+  it has applied in `PRAGMA user_version`; each step runs in a transaction
+  together with the count that records it, so one that fails leaves nothing
+  behind and is tried again at the next start.
+
+A database from an earlier release starts at step 0, so it runs every step once
+at its first start on the new release. Its tables, sources, articles and
+activities are kept: steps only add what is missing. A database already past
+the last step this release knows, written by a newer one, is left alone.
+
+The `.sql` file in `daemon/internal/database/migrations/` is not read by
+anything; the schema lives in Go.
+
 ### News feed
 
-News is on by default. A box installed before the feature existed keeps its
-env file across updates, so it has no `NEWS_*` lines: it runs with news on and
-no sources, and `GET /api/news` answers an empty list —
-`{"articles":[],"updatedAt":null,"sources":[]}` — without collecting anything.
+News is on by default. A box whose env file came from the first news template
+has `NEWS_ENABLED=false` written in it, and keeps news off until that line is
+changed or removed. With news off the endpoint answers 503.
 
-To give it feeds, add `NEWS_SOURCES` to `/etc/kiosk-home-display/kiosk.env` by
-hand (or push the template with `KIOSK_ENV_OVERWRITE=true`, which also replaces
-any other hand-tuned value) and restart the service:
+#### Sources
 
-```sh
-NEWS_SOURCES=G1|https://g1.globo.com/rss/g1/|general;NASA|https://www.nasa.gov/feed/|science
-```
+The feeds come from one of two places:
 
-A box whose env file came from the first news template has `NEWS_ENABLED=false`
-written in it, and keeps news off until that line is changed or removed. With
-news off the endpoint answers 503. Every other setting is optional:
+- **The database** (`news_sources`). A new database starts with the defaults
+  below, written by migration step 1. With `NEWS_SOURCES` unset or empty, the
+  daemon collects the sources enabled in this table and leaves it unchanged.
+- **`NEWS_SOURCES`** in `/etc/kiosk-home-display/kiosk.env`. When set, it
+  overrides the table: at every start its sources are written to the table and
+  every other source is disabled — not deleted, so its articles come back if it
+  is listed again within `NEWS_DISABLED_SOURCE_GRACE`.
+
+The defaults:
+
+| Name | Category | Feed |
+|---|---|---|
+| Agência Brasil | `general` | `https://agenciabrasil.ebc.com.br/feed/ultimasnoticias/feed.xml` |
+| G1 | `general` | `https://g1.globo.com/rss/g1/` |
+| NASA | `science` | `https://www.nasa.gov/feed/` |
+| BBC News Brasil | `general` | `https://feeds.bbci.co.uk/portuguese/rss.xml` |
+| ACidade ON Ribeirão Preto | `general` | `https://www.acidadeon.com/ribeiraopreto/feed/` |
+
+**EPTV is pending feed verification** and is not among them. Its own domain
+(`eptv.globo.com`) does not resolve, and its stories are published through g1's
+regional feeds (such as `https://g1.globo.com/rss/g1/sp/ribeirao-preto-franca/`),
+which are g1 feeds, not EPTV's. Agência Brasil's address answers with a
+redirect within its own host to `/rss/ultimasnoticias/feed.xml`, which the
+daemon follows.
+
+What a box ends up with after updating to this release:
+
+- **A new install** from the current templates leaves `NEWS_SOURCES` commented
+  out and collects the five defaults.
+- **A box whose env file sets `NEWS_SOURCES`** — every template before this
+  release set G1 and NASA — keeps exactly those feeds. The other defaults are
+  added to its table but disabled at each start. Removing the line afterwards
+  keeps the table as the last start left it, so it would still collect only G1
+  and NASA. To collect all five, list them:
+
+  ```sh
+  NEWS_SOURCES=Agência Brasil|https://agenciabrasil.ebc.com.br/feed/ultimasnoticias/feed.xml|general;G1|https://g1.globo.com/rss/g1/|general;NASA|https://www.nasa.gov/feed/|science;BBC News Brasil|https://feeds.bbci.co.uk/portuguese/rss.xml|general;ACidade ON Ribeirão Preto|https://www.acidadeon.com/ribeiraopreto/feed/|general
+  ```
+
+- **A box with no `NEWS_*` lines**, installed before news existed, had news on
+  with no sources and served an empty list. It now collects the five defaults
+  without any change to its env file.
+
+To add or change a default for future installations, check that the address
+serves RSS or Atom (not the site's home page), then:
+
+- Editing the list in `daemon/internal/news/defaults.go` reaches **new
+  databases only**: boxes already past step 1 never run it again.
+- To reach installed boxes too, append a new step to `steps` in
+  `daemon/internal/database/migrate.go` that inserts the source with
+  `ON CONFLICT(feed_url) DO NOTHING`. Never edit, remove or reorder a step that
+  has shipped. A box with `NEWS_SOURCES` set still decides for itself.
+
+Every other setting is optional:
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `NEWS_ENABLED` | `true` | `false` switches news off |
-| `NEWS_SOURCES` | empty | Feeds; empty serves an empty list |
+| `NEWS_SOURCES` | empty | Feeds; overrides the database. Empty collects the sources enabled in the database |
 | `NEWS_FETCH_INTERVAL` | `20m` | How often feeds are collected, in the background |
 | `NEWS_FETCH_TIMEOUT` | `10s` | Per feed; a feed that fails keeps its articles |
 | `NEWS_MAX_ARTICLES_PER_FETCH` | `30` | Newest items stored from one fetch of one feed |
@@ -256,9 +327,6 @@ A box whose env file came from the first news template already has
 keep working. `NEWS_RETENTION` is still the total, but it is now shared among
 sources instead of going to the newest articles of whichever feed publishes
 most.
-
-Sources are still configured in `NEWS_SOURCES`. Moving them into SQLite, and
-leaving only the settings above in the env file, is a pending decision.
 
 Articles of a source removed from `NEWS_SOURCES` stay out of the slideshow and
 out of the retention, and are deleted once they have gone unfetched for

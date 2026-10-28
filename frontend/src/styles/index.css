@@ -16,6 +16,8 @@
 
 @import "./views/views.css";
 
+@import "./news/news-view.css";
+
 @import "./screensaver/screensaver-layout.css";
 
 @import "./notifications/notification.css";

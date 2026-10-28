@@ -1,9 +1,15 @@
 import { ActivityWidget } from "../widgets/activity-widget";
 
-export function ActivityView() {
+import type { Activity } from "@/types/activity";
+
+type ActivityViewProps = Readonly<{
+  activities: Activity[];
+}>;
+
+export function ActivityView({ activities }: ActivityViewProps) {
   return (
     <div className="activity-view">
-      <ActivityWidget maxActivities={8} />
+      <ActivityWidget activities={activities} />
     </div>
   );
 }

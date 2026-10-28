@@ -16,6 +16,7 @@ import (
 	"github.com/thiagoleet/kiosk-home-display/internal/http"
 	"github.com/thiagoleet/kiosk-home-display/internal/i18n"
 	"github.com/thiagoleet/kiosk-home-display/internal/idle"
+	"github.com/thiagoleet/kiosk-home-display/internal/news"
 	"github.com/thiagoleet/kiosk-home-display/internal/notification"
 	"github.com/thiagoleet/kiosk-home-display/internal/printer"
 	"github.com/thiagoleet/kiosk-home-display/internal/scheduler"
@@ -35,6 +36,8 @@ type App struct {
 	printerMon   *printer.Monitor
 	notification *notification.Manager
 	activity     *activity.Manager
+	news         *news.Service
+	newsSched    *news.Scheduler
 	websocket    *websocket.Server
 	httpServer   *http.Server
 }
@@ -194,6 +197,40 @@ func New(cfg config.Config) (*App, error) {
 		cfg.Weather.ForecastDays,
 	)
 
+	newsService := news.NewService(
+		news.NewSQLiteRepository(db.DB),
+		news.NewHTTPFetcher(
+			nil,
+			cfg.News.FetchTimeout,
+		),
+		news.Config{
+			Enabled:      cfg.News.Enabled,
+			Sources:      cfg.News.Sources,
+			DisplayLimit: cfg.News.DisplayLimit,
+			Retention:    cfg.News.Retention,
+		},
+	)
+
+	if err := newsService.Init(
+		context.Background(),
+	); err != nil {
+		db.Close()
+
+		return nil, fmt.Errorf(
+			"sync news sources: %w",
+			err,
+		)
+	}
+
+	var newsScheduler *news.Scheduler
+
+	if newsService.Enabled() {
+		newsScheduler = news.NewScheduler(
+			newsService,
+			cfg.News.FetchInterval,
+		)
+	}
+
 	websocketServer := websocket.NewServer(
 		bus,
 		stateManager,
@@ -209,6 +246,7 @@ func New(cfg config.Config) (*App, error) {
 		printerManager,
 		activityRepository,
 		weatherService,
+		newsService,
 		texts,
 		cfg.HTTP.AllowedOrigins,
 	)
@@ -225,6 +263,8 @@ func New(cfg config.Config) (*App, error) {
 		printerMon:   printerMonitor,
 		notification: notificationManager,
 		activity:     activityManager,
+		news:         newsService,
+		newsSched:    newsScheduler,
 
 		websocket:  websocketServer,
 		httpServer: httpServer,
@@ -270,6 +310,15 @@ func (a *App) Run(ctx context.Context) error {
 			"[APP] printer mode is %q, no print queue is watched. Set PRINTER_MODE=cups to report real jobs, or PRINTER_MODE=off on a host with no printer.",
 			a.config.Printer.Mode,
 		)
+	}
+
+	if a.newsSched != nil {
+		log.Printf(
+			"[APP] refreshing news every %s",
+			a.config.News.FetchInterval,
+		)
+
+		a.newsSched.Start()
 	}
 
 	go func() {
@@ -419,6 +468,10 @@ func (a *App) Stop() error {
 
 	if a.printerMon != nil {
 		a.printerMon.Stop()
+	}
+
+	if a.newsSched != nil {
+		a.newsSched.Stop()
 	}
 
 	if a.config.Scheduler.Enabled {

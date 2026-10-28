@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/thiagoleet/kiosk-home-display/internal/news"
 )
 
 type Config struct {
@@ -16,6 +18,7 @@ type Config struct {
 	Activity  ActivityConfig
 	Printer   PrinterConfig
 	Weather   WeatherConfig
+	News      NewsConfig
 }
 
 type HTTPConfig struct {
@@ -67,6 +70,18 @@ type WeatherConfig struct {
 	ForecastDays    int
 }
 
+// FetchInterval and FetchTimeout govern the background collection, which never
+// blocks startup. DisplayLimit is what GET /api/news returns by default and
+// Retention how many articles stay in SQLite across all sources.
+type NewsConfig struct {
+	Enabled       bool
+	Sources       []news.Source
+	FetchInterval time.Duration
+	FetchTimeout  time.Duration
+	DisplayLimit  int
+	Retention     int
+}
+
 func Default() Config {
 	return Config{
 		HTTP: HTTPConfig{
@@ -107,6 +122,13 @@ func Default() Config {
 			Timezone:        "America/Sao_Paulo",
 			CacheTTL:        5 * time.Minute,
 			ForecastDays:    5,
+		},
+		News: NewsConfig{
+			Enabled:       false,
+			FetchInterval: 20 * time.Minute,
+			FetchTimeout:  10 * time.Second,
+			DisplayLimit:  20,
+			Retention:     100,
 		},
 	}
 }
@@ -216,6 +238,38 @@ func (c Config) Validate() error {
 		if c.Weather.ForecastDays < 1 || c.Weather.ForecastDays > 16 {
 			return fmt.Errorf(
 				"weather forecast days must be between 1 and 16",
+			)
+		}
+	}
+
+	if c.News.Enabled {
+		if len(c.News.Sources) == 0 {
+			return fmt.Errorf(
+				"news is enabled but no news sources are configured",
+			)
+		}
+
+		if c.News.FetchInterval < time.Minute {
+			return fmt.Errorf(
+				"news fetch interval must be at least one minute",
+			)
+		}
+
+		if c.News.FetchTimeout <= 0 {
+			return fmt.Errorf(
+				"news fetch timeout must be greater than zero",
+			)
+		}
+
+		if c.News.DisplayLimit < 1 {
+			return fmt.Errorf(
+				"news display limit must be greater than zero",
+			)
+		}
+
+		if c.News.Retention < c.News.DisplayLimit {
+			return fmt.Errorf(
+				"news retention must be at least the display limit",
 			)
 		}
 	}
@@ -464,6 +518,78 @@ func Load() (Config, error) {
 		}
 
 		config.Weather.ForecastDays = forecastDays
+	}
+
+	if value := os.Getenv("NEWS_ENABLED"); value != "" {
+		enabled, err := strconv.ParseBool(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_ENABLED: %w",
+				err,
+			)
+		}
+
+		config.News.Enabled = enabled
+	}
+
+	if value := os.Getenv("NEWS_SOURCES"); value != "" {
+		sources, err := news.ParseSources(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_SOURCES: %w",
+				err,
+			)
+		}
+
+		config.News.Sources = sources
+	}
+
+	if value := os.Getenv("NEWS_FETCH_INTERVAL"); value != "" {
+		interval, err := time.ParseDuration(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_FETCH_INTERVAL: %w",
+				err,
+			)
+		}
+
+		config.News.FetchInterval = interval
+	}
+
+	if value := os.Getenv("NEWS_FETCH_TIMEOUT"); value != "" {
+		timeout, err := time.ParseDuration(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_FETCH_TIMEOUT: %w",
+				err,
+			)
+		}
+
+		config.News.FetchTimeout = timeout
+	}
+
+	if value := os.Getenv("NEWS_DISPLAY_LIMIT"); value != "" {
+		limit, err := strconv.Atoi(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_DISPLAY_LIMIT: %w",
+				err,
+			)
+		}
+
+		config.News.DisplayLimit = limit
+	}
+
+	if value := os.Getenv("NEWS_RETENTION"); value != "" {
+		retention, err := strconv.Atoi(value)
+		if err != nil {
+			return Config{}, fmt.Errorf(
+				"invalid NEWS_RETENTION: %w",
+				err,
+			)
+		}
+
+		config.News.Retention = retention
 	}
 
 	if err := config.Validate(); err != nil {

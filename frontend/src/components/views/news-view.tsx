@@ -47,6 +47,10 @@ export function NewsView({ article }: NewsViewProps) {
       <div className="news-view__caption">
         <h2 className="news-view__headline">{article.title}</h2>
 
+        {article.summary && (
+          <p className="news-view__summary">{article.summary}</p>
+        )}
+
         {article.source && (
           <span className="news-view__source">{article.source}</span>
         )}

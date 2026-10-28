@@ -74,6 +74,26 @@
   text-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
 }
 
+.news-view__summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+
+  margin: 0;
+
+  overflow: hidden;
+  overflow-wrap: anywhere;
+
+  color: var(--color-foreground);
+  opacity: 0.85;
+
+  font-size: clamp(0.5rem, 1.4vw, 0.875rem);
+  line-height: 1.6;
+
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+}
+
 .news-view__source {
   overflow: hidden;
 
@@ -93,5 +113,18 @@
       var(--spacing-xl)
       var(--spacing-md)
       var(--spacing-md);
+
+    background:
+      linear-gradient(
+        to top,
+        rgb(0 0 0 / 0.92) 0%,
+        rgb(0 0 0 / 0.8) 60%,
+        rgb(0 0 0 / 0) 100%
+      );
+  }
+
+  .news-view__summary {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
   }
 }

@@ -160,6 +160,10 @@ func stored(t *testing.T, repository *SQLiteRepository) map[string]int {
 		counts[name] = count
 	}
 
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterate: %v", err)
+	}
+
 	return counts
 }
 
@@ -372,6 +376,84 @@ func TestDisabledSourceArticles(t *testing.T) {
 
 	if counts := stored(t, repository); counts["B"] != 0 || counts["A"] != 20 {
 		t.Fatalf("after the grace period = %v, want A:20 B:0", counts)
+	}
+}
+
+// seedSourcesForCleanup leaves A enabled with an article not fetched for a
+// month, and B disabled with one expired and one recent article.
+func seedSourcesForCleanup(t *testing.T, repository *SQLiteRepository) {
+	t.Helper()
+
+	ctx := context.Background()
+
+	if _, err := repository.SyncSources(ctx, []Source{sourceA, sourceB}); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+
+	sources, err := repository.enabledSources(ctx)
+	if err != nil {
+		t.Fatalf("sources: %v", err)
+	}
+
+	monthAgo := base.Add(-30 * 24 * time.Hour)
+
+	if err := repository.SaveFetch(ctx, sources[0].ID,
+		feedArticles(sourceA, "stale", 1, monthAgo, time.Minute), monthAgo); err != nil {
+		t.Fatalf("save A: %v", err)
+	}
+
+	if err := repository.SaveFetch(ctx, sources[1].ID,
+		feedArticles(sourceB, "expired", 1, monthAgo, time.Minute), monthAgo); err != nil {
+		t.Fatalf("save B: %v", err)
+	}
+
+	if err := repository.SaveFetch(ctx, sources[1].ID,
+		feedArticles(sourceB, "recent", 1, base, time.Minute), base.Add(-time.Hour)); err != nil {
+		t.Fatalf("save B: %v", err)
+	}
+
+	// B leaves the configuration.
+	if _, err := repository.SyncSources(ctx, []Source{sourceA}); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+}
+
+func TestInitCleansDisabledSourcesWhenNewsIsOff(t *testing.T) {
+	repository := openTestRepository(t)
+	seedSourcesForCleanup(t, repository)
+
+	service := NewService(repository, newStubFetcher(), Config{
+		Enabled:   false,
+		Retention: Retention{DisabledGrace: 7 * 24 * time.Hour},
+	})
+	service.clock = func() time.Time { return base }
+
+	if err := service.Init(context.Background()); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	// A stays enabled in the database, so its month-old article survives.
+	if counts := stored(t, repository); counts["A"] != 1 || counts["B"] != 1 {
+		t.Fatalf("stored = %v, want A:1 B:1", counts)
+	}
+
+	// Nothing was synced: A is still the only enabled source.
+	enabled, err := repository.enabledSources(context.Background())
+	if err != nil || len(enabled) != 1 || enabled[0].Name != "A" {
+		t.Fatalf("enabled = %+v, %v", enabled, err)
+	}
+}
+
+func TestInitCleansDisabledSourcesWhenNewsIsOn(t *testing.T) {
+	repository := openTestRepository(t)
+	seedSourcesForCleanup(t, repository)
+
+	newTestService(t, repository, newStubFetcher(), Config{
+		Sources: []Source{sourceA},
+	})
+
+	if counts := stored(t, repository); counts["A"] != 1 || counts["B"] != 1 {
+		t.Fatalf("stored = %v, want A:1 B:1", counts)
 	}
 }
 

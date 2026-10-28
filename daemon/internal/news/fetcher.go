@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"regexp"
 	"strings"
@@ -32,42 +34,61 @@ type Fetcher interface {
 	Fetch(ctx context.Context, source Source) ([]Article, error)
 }
 
+// imageLookupTimeout bounds each DNS lookup made to vet an image host.
+const imageLookupTimeout = 2 * time.Second
+
 type HTTPFetcher struct {
 	client   *http.Client
+	resolver Resolver
 	location *time.Location
 	clock    func() time.Time
 }
 
 // location is the zone assumed for feed dates that carry none, and for zone
-// abbreviations that cannot be mapped to an offset.
+// abbreviations that cannot be mapped to an offset. Without a client of its
+// own, the fetcher builds one that refuses redirects and connections to
+// internal addresses; see netguard.go.
 func NewHTTPFetcher(
 	client *http.Client,
 	timeout time.Duration,
 	location *time.Location,
 ) *HTTPFetcher {
-	if client == nil {
-		client = &http.Client{
-			Timeout: timeout,
-		}
-	}
-
 	if location == nil {
 		location = time.UTC
 	}
 
-	return &HTTPFetcher{
-		client:   client,
+	fetcher := &HTTPFetcher{
+		resolver: net.DefaultResolver,
 		location: location,
 		clock:    time.Now,
 	}
+
+	if client == nil {
+		client = newGuardedClient(
+			timeout,
+			func() Resolver { return fetcher.resolver },
+		)
+	}
+
+	fetcher.client = client
+
+	return fetcher
 }
 
 func (f *HTTPFetcher) Fetch(
 	ctx context.Context,
 	source Source,
 ) ([]Article, error) {
+	feedURL, err := url.Parse(source.FeedURL)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"parse feed url: %w",
+			err,
+		)
+	}
+
 	request, err := http.NewRequestWithContext(
-		ctx,
+		withTrustedHost(ctx, feedURL),
 		http.MethodGet,
 		source.FeedURL,
 		nil,
@@ -104,7 +125,7 @@ func (f *HTTPFetcher) Fetch(
 
 	// Relative links resolve against where the feed was finally served from,
 	// after any redirect.
-	return parseFeed(
+	articles, err := parseFeed(
 		io.LimitReader(response.Body, maxFeedSize),
 		source,
 		parseOptions{
@@ -113,6 +134,83 @@ func (f *HTTPFetcher) Fetch(
 			now:      f.clock(),
 		},
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	f.dropInternalImages(ctx, articles)
+
+	return articles, nil
+}
+
+// dropInternalImages removes image URLs whose host resolves to an internal
+// address, such as a public name pointing at 192.168.0.1. Parsing already
+// refused internal names and literals; this catches what only DNS reveals.
+//
+// It is a best-effort filter, not a guarantee: the kiosk browser resolves the
+// name again when it loads the image, and DNS may answer differently by then.
+// Closing that gap needs the daemon to fetch images itself through the
+// guarded dialer, which is the image proxy left for later.
+//
+// A host that cannot be resolved loses its image too; the browser could not
+// load it either, and the next fetch restores it once DNS answers.
+func (f *HTTPFetcher) dropInternalImages(
+	ctx context.Context,
+	articles []Article,
+) {
+	public := map[string]bool{}
+
+	for i := range articles {
+		if articles[i].ImageURL == "" {
+			continue
+		}
+
+		parsed, err := url.Parse(articles[i].ImageURL)
+		if err != nil {
+			articles[i].ImageURL = ""
+
+			continue
+		}
+
+		host := strings.ToLower(parsed.Hostname())
+
+		if _, err := netip.ParseAddr(host); err == nil {
+			// A literal was already checked while parsing.
+			continue
+		}
+
+		allowed, seen := public[host]
+
+		if !seen {
+			allowed = f.resolvesPublicly(ctx, host)
+			public[host] = allowed
+		}
+
+		if !allowed {
+			articles[i].ImageURL = ""
+		}
+	}
+}
+
+func (f *HTTPFetcher) resolvesPublicly(
+	ctx context.Context,
+	host string,
+) bool {
+	ctx, cancel := context.WithTimeout(ctx, imageLookupTimeout)
+	defer cancel()
+
+	addrs, err := f.resolver.LookupNetIP(ctx, "ip", host)
+	if err != nil || len(addrs) == 0 {
+		return false
+	}
+
+	for _, addr := range addrs {
+		if internalAddr(addr) {
+			return false
+		}
+	}
+
+	return true
 }
 
 type parseOptions struct {
@@ -317,15 +415,17 @@ func normalizeEntry(
 	// Media elements are part of the feed document and resolve against its
 	// base. An image inside the article HTML was written for the article page,
 	// so it resolves against that instead.
-	imageURL := resolveURL(base, entryImage(entry))
+	// Image URLs are loaded by the kiosk browser on the device, so only
+	// public hosts are accepted.
+	imageURL := publicURL(base, entryImage(entry))
 
 	if imageURL == "" {
 		page := parseBase(link)
 
-		imageURL = resolveURL(page, firstImage(description))
+		imageURL = publicURL(page, firstImage(description))
 
 		if imageURL == "" {
-			imageURL = resolveURL(page, firstImage(body))
+			imageURL = publicURL(page, firstImage(body))
 		}
 	}
 

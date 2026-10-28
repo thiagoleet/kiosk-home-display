@@ -57,21 +57,36 @@ func (s *Service) Enabled() bool {
 	return s.config.Enabled
 }
 
-// Init writes the configured sources to the database. It touches no network,
-// so it is safe to run before the HTTP server starts.
+// Init writes the configured sources to the database and deletes the expired
+// articles of disabled sources. It touches no network, so it is safe to run
+// before the HTTP server starts.
+//
+// The cleanup runs even with news switched off, because then no refresh cycle
+// ever prunes. It is the only cleanup in that case, so articles expire at the
+// first daemon start after their grace period — a reboot, deploy or restart —
+// rather than the moment it ends. With news off the source list is not
+// synced, so sources still marked enabled keep their articles: switching the
+// feature off is not taken as removing its sources.
 func (s *Service) Init(ctx context.Context) error {
-	if !s.config.Enabled {
-		return nil
+	if s.config.Enabled {
+		sources, err := s.repository.SyncSources(ctx, s.config.Sources)
+		if err != nil {
+			return err
+		}
+
+		s.refreshing.Lock()
+		s.sources = sources
+		s.refreshing.Unlock()
 	}
 
-	sources, err := s.repository.SyncSources(ctx, s.config.Sources)
-	if err != nil {
-		return err
+	// Housekeeping must not keep the kiosk from starting.
+	if err := s.repository.PruneDisabled(
+		ctx,
+		s.config.Retention.DisabledGrace,
+		s.clock(),
+	); err != nil {
+		log.Printf("[NEWS] %v", err)
 	}
-
-	s.refreshing.Lock()
-	s.sources = sources
-	s.refreshing.Unlock()
 
 	return nil
 }

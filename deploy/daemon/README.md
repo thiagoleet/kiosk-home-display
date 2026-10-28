@@ -219,6 +219,58 @@ window.
 The SQLite database lives at `/var/lib/kiosk-home-display/data/kiosk.db`,
 because the daemon resolves it relative to the working directory.
 
+### News feed
+
+The news slideshow is off unless the env file turns it on. A box installed
+before the feature existed keeps its env file across updates, so it has no
+`NEWS_*` lines at all and the daemon runs with the defaults below — news off.
+
+To turn it on, add these two to `/etc/kiosk-home-display/kiosk.env` by hand
+(or push the template with `KIOSK_ENV_OVERWRITE=true`, which also replaces any
+other hand-tuned value) and restart the service:
+
+```sh
+NEWS_ENABLED=true
+NEWS_SOURCES=G1|https://g1.globo.com/rss/g1/|general;NASA|https://www.nasa.gov/feed/|science
+```
+
+`NEWS_ENABLED=true` without `NEWS_SOURCES` is a configuration error, and the
+daemon refuses to start. Every other setting is optional:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `NEWS_FETCH_INTERVAL` | `20m` | How often feeds are collected, in the background |
+| `NEWS_FETCH_TIMEOUT` | `10s` | Per feed; a feed that fails keeps its articles |
+| `NEWS_MAX_ARTICLES_PER_FETCH` | `30` | Newest items stored from one fetch of one feed |
+| `NEWS_DISPLAY_LIMIT` | `20` | Articles `GET /api/news` returns by default |
+| `NEWS_RETENTION_PER_SOURCE` | `30` | Articles each source keeps |
+| `NEWS_RETENTION` | `100` | Articles all sources keep together, shared fairly |
+| `NEWS_DISABLED_SOURCE_GRACE` | `168h` | How long a removed source's articles are kept |
+| `NEWS_TIMEZONE` | `TIMEZONE` | Zone assumed for feed dates that carry none |
+
+A box whose env file came from the first news template already has
+`NEWS_RETENTION=100` and the interval, timeout and display limit lines; they
+keep working. `NEWS_RETENTION` is still the total, but it is now shared among
+sources instead of going to the newest articles of whichever feed publishes
+most.
+
+Sources are still configured in `NEWS_SOURCES`. Moving them into SQLite, and
+leaving only the settings above in the env file, is a pending decision.
+
+Articles of a source removed from `NEWS_SOURCES` stay out of the slideshow and
+out of the retention, and are deleted once they have gone unfetched for
+`NEWS_DISABLED_SOURCE_GRACE`. That cleanup runs after every collection, and
+also once when the daemon starts — including with `NEWS_ENABLED=false`, where
+the start is the only time it runs, so expired articles go at the next reboot,
+deploy or restart. Switching news off does not count as removing its sources:
+their articles are kept for when it is switched back on.
+
+Feeds are fetched without the environment's HTTP proxy. A feed may redirect
+within its own host freely, but a redirect to another host is refused when that
+host is the device itself or on a private network, whether it says so by name
+or only resolves there. Image URLs pointing at such hosts are dropped from the
+articles, and the slideshow shows its fallback instead.
+
 ## Update
 
 ```sh

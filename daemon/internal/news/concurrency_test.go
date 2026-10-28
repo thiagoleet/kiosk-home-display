@@ -99,24 +99,16 @@ func TestRefreshAlongsideReadersAndActivities(t *testing.T) {
 
 	errs := make(chan error, 1000)
 
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		for range 20 {
 			service.Refresh(context.Background())
 		}
 
 		cancel()
-	}()
+	})
 
 	for reader := range 4 {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			for ctx.Err() == nil {
 				feed, err := service.List(context.Background(), 20)
 				if err != nil {
@@ -132,14 +124,10 @@ func TestRefreshAlongsideReadersAndActivities(t *testing.T) {
 					return
 				}
 			}
-		}()
+		})
 	}
 
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		for i := 0; ctx.Err() == nil; i++ {
 			if err := activities.Create(
 				context.Background(),
@@ -155,7 +143,7 @@ func TestRefreshAlongsideReadersAndActivities(t *testing.T) {
 				return
 			}
 		}
-	}()
+	})
 
 	wg.Wait()
 	close(errs)

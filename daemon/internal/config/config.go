@@ -258,6 +258,14 @@ func (c Config) Validate() error {
 		}
 	}
 
+	// Checked even with news off: the startup cleanup of disabled sources
+	// runs either way.
+	if c.News.DisabledSourceGrace < 0 {
+		return fmt.Errorf(
+			"news disabled source grace cannot be negative",
+		)
+	}
+
 	if c.News.Enabled {
 		if len(c.News.Sources) == 0 {
 			return fmt.Errorf(
@@ -298,12 +306,6 @@ func (c Config) Validate() error {
 		if c.News.Retention < c.News.DisplayLimit {
 			return fmt.Errorf(
 				"news retention must be at least the display limit",
-			)
-		}
-
-		if c.News.DisabledSourceGrace < 0 {
-			return fmt.Errorf(
-				"news disabled source grace cannot be negative",
 			)
 		}
 

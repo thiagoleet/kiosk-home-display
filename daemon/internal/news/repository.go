@@ -257,6 +257,7 @@ type Repository interface {
 	MarkFailed(ctx context.Context, sourceID int64, message string) error
 	MarkRefreshed(ctx context.Context, completedAt time.Time) error
 	Prune(ctx context.Context, retention Retention, now time.Time) error
+	PruneDisabled(ctx context.Context, grace time.Duration, now time.Time) error
 	Snapshot(ctx context.Context, limit int) (Feed, error)
 }
 
@@ -581,21 +582,13 @@ func (r *SQLiteRepository) Prune(
 
 	defer tx.Rollback()
 
-	const disabled = `
-		DELETE FROM news_articles
-		WHERE source_id IN (SELECT id FROM news_sources WHERE enabled = 0)
-		AND fetched_at < ?
-	`
-
-	if _, err := tx.ExecContext(
+	if err := pruneDisabled(
 		ctx,
-		disabled,
-		formatTime(now.Add(-retention.DisabledGrace)),
+		tx,
+		retention.DisabledGrace,
+		now,
 	); err != nil {
-		return fmt.Errorf(
-			"failed to prune articles of disabled sources: %w",
-			err,
-		)
+		return err
 	}
 
 	// turn is an article's position within its own source, newest first.
@@ -646,6 +639,64 @@ func (r *SQLiteRepository) Prune(
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf(
 			"failed to commit news pruning: %w",
+			err,
+		)
+	}
+
+	return nil
+}
+
+// PruneDisabled deletes the articles of disabled sources not seen in a fetch
+// for longer than grace. It touches nothing else, which is what makes it safe
+// to run when news is switched off and no source is being refreshed.
+func (r *SQLiteRepository) PruneDisabled(
+	ctx context.Context,
+	grace time.Duration,
+	now time.Time,
+) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to begin pruning disabled sources: %w",
+			err,
+		)
+	}
+
+	defer tx.Rollback()
+
+	if err := pruneDisabled(ctx, tx, grace, now); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf(
+			"failed to commit pruning disabled sources: %w",
+			err,
+		)
+	}
+
+	return nil
+}
+
+func pruneDisabled(
+	ctx context.Context,
+	tx *sql.Tx,
+	grace time.Duration,
+	now time.Time,
+) error {
+	const query = `
+		DELETE FROM news_articles
+		WHERE source_id IN (SELECT id FROM news_sources WHERE enabled = 0)
+		AND fetched_at < ?
+	`
+
+	if _, err := tx.ExecContext(
+		ctx,
+		query,
+		formatTime(now.Add(-grace)),
+	); err != nil {
+		return fmt.Errorf(
+			"failed to prune articles of disabled sources: %w",
 			err,
 		)
 	}

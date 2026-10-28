@@ -6,15 +6,21 @@ import { HomeView } from "@/components/views/home-view";
 import { WeatherView } from "@/components/views/weather-view";
 import { ActivityView } from "../views/activity-view";
 import { WeatherForecastViewWidget } from "../view-widgets/weather-forecast-view-widget";
+import { NewsView } from "../views/news-view";
 
 import { useCarousel } from "@/hooks/use-carousel";
+import { useNews } from "@/hooks/use-news";
 
 import type { CarouselSlide } from "@/types/carousel";
 
 export function HomeLayout() {
+  const { articles } = useNews();
+
   /**
    * The home view is the first and default slide.
-   * Extra slides are appended after it.
+   * Extra slides are appended after it. News goes last,
+   * so the fixed slides keep their positions when the
+   * feed changes size or goes away.
    */
   const slides = useMemo<CarouselSlide[]>(
     () => [
@@ -22,8 +28,12 @@ export function HomeLayout() {
       { id: "weather", content: <WeatherView /> },
       { id: "weather-forecast", content: <WeatherForecastViewWidget /> },
       { id: "activity", content: <ActivityView /> },
+      ...articles.map((article) => ({
+        id: `news-${article.id}`,
+        content: <NewsView article={article} />,
+      })),
     ],
-    [],
+    [articles],
   );
 
   const { activeIndex, goTo } = useCarousel({ length: slides.length });

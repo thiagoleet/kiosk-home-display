@@ -769,13 +769,20 @@ func TestSyncSourcesDisablesRemovedSources(t *testing.T) {
 	}
 }
 
-func TestListWithoutSourcesIsAnEmptyList(t *testing.T) {
+// An empty NEWS_SOURCES no longer disables every source: the table is left as
+// the last configuration wrote it, and its enabled sources are collected.
+func TestEmptyingSourcesKeepsTheTableAsItIs(t *testing.T) {
 	repository := openTestRepository(t)
 	fetcher := newStubFetcher()
 
 	fetcher.articles[sourceA.FeedURL] = feedArticles(sourceA, "a", 3, base, time.Minute)
 
-	// A had been configured and refreshed before NEWS_SOURCES was emptied.
+	// A had been configured and refreshed before NEWS_SOURCES was emptied; B
+	// had been removed from it before that.
+	newTestService(t, repository, fetcher, Config{
+		Sources: []Source{sourceA, sourceB},
+	})
+
 	service := newTestService(t, repository, fetcher, Config{
 		Sources: []Source{sourceA},
 	})
@@ -784,17 +791,18 @@ func TestListWithoutSourcesIsAnEmptyList(t *testing.T) {
 
 	service = newTestService(t, repository, fetcher, Config{})
 
-	feed := list(t, service, 20)
-
-	body, err := json.Marshal(feed)
-	if err != nil {
-		t.Fatalf("marshal: %v", err)
+	if !service.HasSources() {
+		t.Fatal("expected the enabled source to be collected")
 	}
 
-	const want = `{"articles":[],"updatedAt":null,"sources":[]}`
+	feed := list(t, service, 20)
 
-	if string(body) != want {
-		t.Fatalf("body = %s, want %s", body, want)
+	if len(feed.Articles) != 3 {
+		t.Fatalf("articles = %d, want 3", len(feed.Articles))
+	}
+
+	if len(feed.Sources) != 1 || feed.Sources[0].Name != "A" {
+		t.Fatalf("sources = %+v, want only A", feed.Sources)
 	}
 }
 

@@ -240,8 +240,9 @@ func New(cfg config.Config) (*App, error) {
 	var newsScheduler *news.Scheduler
 
 	// Without sources there is nothing to collect, so no goroutine is started;
-	// Init has already done the cleanup a refresh would otherwise repeat.
-	if newsService.Enabled() && len(cfg.News.Sources) > 0 {
+	// Init has already done the cleanup a refresh would otherwise repeat. The
+	// sources come from NEWS_SOURCES or, when it is empty, from the table.
+	if newsService.Enabled() && newsService.HasSources() {
 		newsScheduler = news.NewScheduler(
 			newsService,
 			cfg.News.FetchInterval,
@@ -340,7 +341,7 @@ func (a *App) Run(ctx context.Context) error {
 
 	case a.config.News.Enabled:
 		log.Printf(
-			"[APP] news is enabled but NEWS_SOURCES is empty: /api/news serves an empty list",
+			"[APP] news is enabled but has no sources: NEWS_SOURCES is empty and none is enabled in the database, so /api/news serves an empty list",
 		)
 	}
 

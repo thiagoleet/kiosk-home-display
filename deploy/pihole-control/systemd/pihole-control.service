@@ -1,0 +1,21 @@
+[Unit]
+Description=Pi-hole Control
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+DynamicUser=yes
+WorkingDirectory=/opt/pihole-control/current
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=8081
+EnvironmentFile=/etc/pihole-control/pihole-control.env
+ExecStart=/opt/pihole-control/current/node server.js
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target

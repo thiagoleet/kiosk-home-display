@@ -48,3 +48,7 @@ endif
 
 deploy-daemon:
 	KIOSK_ENV=$(KIOSK_ENV) ./deploy/daemon/install.sh
+
+.PHONY: deploy-pihole-control
+deploy-pihole-control:
+	./deploy/pihole-control/install.sh

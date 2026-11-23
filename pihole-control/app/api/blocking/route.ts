@@ -85,7 +85,7 @@ export function GET() {
 export function POST(request: Request) {
   const host = request.headers.get("host");
   const origin = request.headers.get("origin");
-  if ((host !== "127.0.0.1:8080" && host !== "localhost:8080") ||
+  if ((host !== "127.0.0.1:8081" && host !== "localhost:8081") ||
       origin !== `http://${host}` ||
       request.headers.get("X-Pihole-Control") !== "disable") {
     return reply({ error: "Request rejected." }, 403);

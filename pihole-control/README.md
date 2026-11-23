@@ -17,4 +17,8 @@ Set `PIHOLE_URL` in `.env.local` to your Pi-hole web origin. Set `PIHOLE_PASSWOR
 npm run dev
 ```
 
-Open <http://127.0.0.1:8080>. The app listens on loopback and the write route accepts same-origin requests from the local interface.
+Open <http://127.0.0.1:8081>. The app listens on loopback and the write route accepts same-origin requests from the local interface.
+
+## Deploy on Raspberry Pi OS
+
+From the repository root on the target Pi, run `make deploy-pihole-control`. See the [deployment guide](../deploy/pihole-control/README.md) for credentials, service commands, and SSH access.

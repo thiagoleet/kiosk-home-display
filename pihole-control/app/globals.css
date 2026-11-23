@@ -1,0 +1,37 @@
+@import "@pxlkit/ui-kit/styles.css";
+
+:root {
+  color-scheme: dark;
+  background: #111714;
+  color: #edf9ef;
+  font-family: system-ui, sans-serif;
+}
+
+main {
+  max-width: 36rem;
+  margin-inline: auto;
+  padding: clamp(2rem, 12vh, 7rem) 1.5rem;
+}
+
+h1 {
+  font-size: clamp(2rem, 8vw, 3.25rem);
+  font-weight: 750;
+  letter-spacing: -.05em;
+  margin-bottom: 1.5rem;
+}
+
+.blocking-panel {
+  padding: clamp(1.25rem, 5vw, 2rem);
+  border: 2px solid #476153;
+  background: #1b2821;
+  box-shadow: 5px 5px 0 #0a100c;
+}
+
+h2 { font-size: 1.25rem; font-weight: 700; }
+.blocking-status { color: #cbd8cf; margin: .5rem 0 1.25rem; }
+.blocking-status[data-state="enabled"] { color: #acf2b5; }
+.blocking-status[data-state="disabled"] { color: #ffdb97; }
+.pause-button { width: 100%; min-height: 3rem; }
+.hint, .error { margin-top: 1rem; }
+.hint { color: #c1cec5; }
+.error { color: #ffb4a8; }

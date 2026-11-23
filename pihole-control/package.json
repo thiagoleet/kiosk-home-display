@@ -1,0 +1,27 @@
+{
+  "dependencies": {
+    "@pxlkit/ui-kit": "^2.2.0",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "postcss": "^8.5.33",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^7.0.2"
+  },
+  "name": "pihole-control",
+  "scripts": {
+    "dev": "next dev --webpack --hostname 127.0.0.1 --port 8080",
+    "build": "next build --webpack",
+    "start": "next start --hostname 127.0.0.1 --port 8080"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "private": true
+}

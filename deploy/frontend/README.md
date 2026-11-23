@@ -45,11 +45,11 @@ cd .. && ./deploy/frontend/install.sh
 ```
 
 The installer copies `frontend/dist` to `/var/www/kiosk-home-display`, enables
-the Nginx site on port `80`, and installs a desktop autostart entry. It removes
+the Nginx site on port `8082`, and installs a desktop autostart entry. It removes
 Nginx's default enabled site, so this Raspberry Pi should be dedicated to the
 kiosk display.
 
-On the next desktop login Chromium opens `http://127.0.0.1/` in kiosk mode.
+On the next desktop login Chromium opens `http://127.0.0.1:8082/` in kiosk mode.
 If Chromium crashes, the launcher retries after two seconds.
 
 ## Update

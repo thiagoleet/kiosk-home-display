@@ -51,7 +51,7 @@ sudo install -m 0755 "$node_path" "$release/node"
 
 sudo install -d -m 0700 "$config_dir"
 if ! sudo test -e "$env_file"; then
-  sudo install -m 0600 "$app_dir/.env.example" "$env_file"
+  sudo install -m 0600 "$script_dir/pihole-control.env.example" "$env_file"
   echo "Created $env_file. Set the Pi-hole URL and application password there."
 fi
 
@@ -62,5 +62,5 @@ sudo systemctl daemon-reload
 sudo systemctl enable "$service"
 sudo systemctl restart "$service"
 
-echo "Pi-hole Control installed at http://127.0.0.1:8081"
+echo "Pi-hole Control installed at http://127.0.0.1/"
 echo "Check it with: systemctl status $service"

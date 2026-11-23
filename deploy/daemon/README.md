@@ -68,7 +68,7 @@ sudo systemctl restart kiosk-home-display
 ```
 
 Keep `HTTP_ALLOWED_ORIGINS=localhost` so the WebSocket endpoint accepts the
-kiosk page that Nginx serves on port `80`.
+kiosk page that Nginx serves on port `8082`.
 
 ### Display mode
 

@@ -18,7 +18,7 @@ while true; do
     --noerrdialogs \
     --disable-session-crashed-bubble \
     --disable-features=Translate \
-    --app=http://127.0.0.1/
+    --app=http://127.0.0.1:8082/
 
   exit_code=$?
 

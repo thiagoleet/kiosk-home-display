@@ -1,27 +1,37 @@
 # Deploy Pi-hole Control on Raspberry Pi OS
 
-Run this on the target Pi from the repository root as a user with sudo access. The Pi needs systemd, Node.js 20.9 or newer, pnpm, access to the package registry during the build, and network access to your Pi-hole v6 instance.
+The Pi needs systemd, Node.js 20.9 or newer, pnpm, and package registry access during the build.
+
+| Service | Port |
+| --- | --- |
+| Pi-hole Control | 80 (loopback) |
+| Kiosk frontend (Nginx) | 8082 |
+| Kiosk Go daemon | 8080 |
+| Pi-hole web interface and API | 8181 |
+
+On an existing kiosk, deploy the frontend first to free port 80. Use the same `KIOSK_ENV` you already deploy with, then log out and back in to reopen Chromium at its new address.
 
 ```sh
+make deploy-frontend KIOSK_ENV=snespi
 make deploy-pihole-control
 sudoedit /etc/pihole-control/pihole-control.env
 sudo systemctl restart pihole-control
 ```
 
-Set `PIHOLE_URL` to the origin of the Pi-hole web interface and `PIHOLE_PASSWORD` to its application password. Leave the password blank if your Pi-hole has no password. The installer creates a root-only environment file and preserves it on updates.
+Set `PIHOLE_URL=http://127.0.0.1:8181` and set `PIHOLE_PASSWORD` to your Pi-hole application password. Leave it blank if Pi-hole has no password. The installer creates a root-only environment file and preserves it on updates, so check the URL if upgrading an existing installation.
 
-Open <http://127.0.0.1:8081> on the Pi. To access it from another computer, forward the same local port over SSH and open the same URL in your browser:
+Open <http://127.0.0.1/> on the Pi. From another computer, forward port 80 on the Pi and open <http://127.0.0.1:8081/> on your computer:
 
 ```sh
-ssh -N -L 127.0.0.1:8081:127.0.0.1:8081 user@your-pi
+ssh -N -L 127.0.0.1:8081:127.0.0.1:80 user@your-pi
 ```
 
-Check the service and read the blocking status:
+Check the service and read the blocking status on the Pi:
 
 ```sh
 systemctl status pihole-control
 journalctl -u pihole-control -n 30
-curl --fail http://127.0.0.1:8081/api/blocking
+curl --fail http://127.0.0.1/api/blocking
 ```
 
-Re-run `make deploy-pihole-control` to update. The installer builds before switching the active release and restarts the service. Releases are kept under `/opt/pihole-control/releases`. The active release is the target of `/opt/pihole-control/current`.
+Re-run `make deploy-pihole-control` to update. The installer builds before switching the active release and restarting the service. Releases are kept under `/opt/pihole-control/releases`. The active release is the target of `/opt/pihole-control/current`.

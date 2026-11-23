@@ -85,8 +85,8 @@ export function GET() {
 export function POST(request: Request) {
   const host = request.headers.get("host");
   const origin = request.headers.get("origin");
-  const localHosts = ["127.0.0.1", "localhost", "127.0.0.1:8081", "localhost:8081"];
-  if (!host || !localHosts.includes(host) ||
+  const allowedHosts = ["milkpi.local", "127.0.0.1", "localhost", "127.0.0.1:8081", "localhost:8081"];
+  if (!host || !allowedHosts.includes(host) ||
       origin !== `http://${host}` ||
       request.headers.get("X-Pihole-Control") !== "disable") {
     return reply({ error: "Request rejected." }, 403);

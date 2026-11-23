@@ -4,7 +4,7 @@ The Pi needs systemd, Node.js 20.9 or newer, pnpm, and package registry access d
 
 | Service | Port |
 | --- | --- |
-| Pi-hole Control | 80 (loopback) |
+| Pi-hole Control | 80 |
 | Kiosk frontend (Nginx) | 8082 |
 | Kiosk Go daemon | 8080 |
 | Pi-hole web interface and API | 8181 |
@@ -20,11 +20,7 @@ sudo systemctl restart pihole-control
 
 Set `PIHOLE_URL=http://127.0.0.1:8181` and set `PIHOLE_PASSWORD` to your Pi-hole application password. Leave it blank if Pi-hole has no password. The installer creates a root-only environment file and preserves it on updates, so check the URL if upgrading an existing installation.
 
-Open <http://127.0.0.1/> on the Pi. From another computer, forward port 80 on the Pi and open <http://127.0.0.1:8081/> on your computer:
-
-```sh
-ssh -N -L 127.0.0.1:8081:127.0.0.1:80 user@your-pi
-```
+Open <http://milkpi.local/> from your local network or <http://127.0.0.1/> on the Pi. Pi-hole Control does not prompt for a login, so any device that can reach the service can pause blocking once the application password is configured.
 
 Check the service and read the blocking status on the Pi:
 

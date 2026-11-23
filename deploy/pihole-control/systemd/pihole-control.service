@@ -8,7 +8,7 @@ Type=exec
 DynamicUser=yes
 WorkingDirectory=/opt/pihole-control/current
 Environment=NODE_ENV=production
-Environment=HOSTNAME=127.0.0.1
+Environment=HOSTNAME=0.0.0.0
 Environment=PORT=80
 EnvironmentFile=/etc/pihole-control/pihole-control.env
 ExecStart=/opt/pihole-control/current/node server.js

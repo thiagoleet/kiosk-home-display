@@ -11,18 +11,18 @@ else
   exit 1
 fi
 
+profile_dir="${XDG_CONFIG_HOME:-$HOME/.config}/kiosk-home-display/chromium"
+
 while true; do
-  "$browser" \
+  if "$browser" \
     --kiosk \
+    --disable-gpu \
+    --user-data-dir="$profile_dir" \
     --no-first-run \
     --noerrdialogs \
     --disable-session-crashed-bubble \
     --disable-features=Translate \
-    --app=http://127.0.0.1:8082/
-
-  exit_code=$?
-
-  if [ "$exit_code" -eq 0 ]; then
+    --app=http://127.0.0.1:8082/; then
     exit 0
   fi
 
